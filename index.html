@@ -1,0 +1,4498 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PE Master · 체육 수업 매니저</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { fontFamily: { sans: ['"Pretendard Variable"', 'Pretendard', '"Noto Sans KR"', 'system-ui', '-apple-system', 'sans-serif'] } } } };
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<!-- FontAwesome 6 (SVG+JS: 아티팩트 보안 정책에서도 동작, React와 충돌 없도록 nest 모드) -->
+<script>window.FontAwesomeConfig = { autoReplaceSvg: 'nest', observeMutations: true };</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+<style type="text/tailwindcss">
+  @layer components {
+    .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 min-h-[48px] font-semibold transition select-none whitespace-nowrap active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none; }
+    .btn-primary { @apply bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-600/30; }
+    .btn-dark { @apply bg-slate-800 text-white hover:bg-slate-900; }
+    .btn-soft { @apply bg-slate-100 text-slate-700 hover:bg-slate-200; }
+    .btn-outline { @apply border-2 border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50; }
+    .btn-danger { @apply bg-rose-50 text-rose-600 hover:bg-rose-100; }
+    .btn-icon { @apply inline-flex items-center justify-center w-12 h-12 shrink-0 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 active:scale-95 transition disabled:opacity-30 disabled:pointer-events-none; }
+    .card { @apply bg-white rounded-3xl shadow-sm border border-slate-200/80; }
+    .input { @apply w-full rounded-xl border-2 border-slate-200 bg-white px-3 min-h-[48px] focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition; }
+    .textarea { @apply w-full rounded-xl border-2 border-slate-200 bg-white p-3 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition resize-y; }
+    .label { @apply block text-sm font-bold text-slate-500 mb-1.5; }
+    .chip { @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold; }
+  }
+</style>
+<style>
+  html { font-size: clamp(14px, 0.4vw + 9px, 24px); }
+  body { -webkit-tap-highlight-color: transparent; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+  @keyframes pop { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
+  .anim-pop { animation: pop .22s ease-out; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  .anim-fade { animation: fadein .2s ease-out; }
+  .sortable-dragging { cursor: grabbing !important; }
+  .sortable-dragging > * { box-shadow: 0 18px 40px -12px rgba(15, 23, 42, .35); }
+  .boot { display:flex; height:100vh; align-items:center; justify-content:center; font-family: sans-serif; color:#64748b; font-size:18px; }
+  .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased font-sans">
+<div id="root"><div class="boot">PE Master 불러오는 중…</div></div>
+
+<!-- Firebase v11 (Modular) Bridge -->
+<script type="module">
+  const V = '11.0.2';
+  Promise.all([
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`),
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-auth.js`),
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`)
+  ]).then(([app, auth, fs]) => {
+    window.__fb = {
+      initializeApp: app.initializeApp, getApps: app.getApps,
+      getAuth: auth.getAuth, signInAnonymously: auth.signInAnonymously, signInWithCustomToken: auth.signInWithCustomToken,
+      getFirestore: fs.getFirestore, doc: fs.doc, setDoc: fs.setDoc, onSnapshot: fs.onSnapshot
+    };
+    window.dispatchEvent(new Event('fb-ready'));
+  }).catch(err => {
+    window.__fbError = String(err && err.message || err);
+    window.dispatchEvent(new Event('fb-error'));
+  });
+</script>
+
+<script>
+function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
+const {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback
+} = React;
+const STORAGE_KEY = 'pe_master_data_v1';
+const SYNC_KEY = 'pe_master_sync_code';
+const FB_KEY = 'pe_master_fb_config';
+const UI_KEY = 'pe_master_ui_v1';
+const APP_ID = typeof window.__app_id !== 'undefined' && window.__app_id ? String(window.__app_id) : 'pe-master';
+const uid = (p = 'id') => `${p}_${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36).slice(-4)}`;
+const clone = o => JSON.parse(JSON.stringify(o));
+const range = n => Array.from({
+  length: Math.max(0, n)
+}, (_, i) => i);
+const todayStr = () => {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+};
+const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+const todayLabel = () => {
+  const d = new Date();
+  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()} (${WEEK[d.getDay()]})`;
+};
+const addDays = (s, n) => {
+  const [y, m, d] = s.split('-').map(Number);
+  const t = new Date(y, m - 1, d + n);
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+};
+const norm = s => String(s ?? '').toLowerCase().replace(/[\s\/\(\)\[\]·・\-_.:,~]/g, '');
+const shuffle = arr => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+const moveItem = (arr, from, to) => {
+  const a = [...arr];
+  const [x] = a.splice(from, 1);
+  a.splice(to, 0, x);
+  return a;
+};
+const splitMaterials = s => String(s || '').split(/[,，、·\/\n]+/).map(x => x.trim()).filter(Boolean);
+const recKey = (classId, lessonId) => `${classId}_${lessonId}`;
+const LS = {
+  get(k) {
+    try {
+      return window.localStorage.getItem(k);
+    } catch (e) {
+      return null;
+    }
+  },
+  set(k, v) {
+    try {
+      window.localStorage.setItem(k, v);
+    } catch (e) {}
+  },
+  del(k) {
+    try {
+      window.localStorage.removeItem(k);
+    } catch (e) {}
+  }
+};
+const IN_CLAUDE = !!(window.claude && typeof window.claude.use === 'function');
+const claudeCap = name => IN_CLAUDE ? Promise.resolve(window.claude.use(name)).catch(() => null) : Promise.resolve(null);
+const downloadBlob = async (blob, name) => {
+  const dl = await claudeCap('downloads');
+  if (dl) {
+    try {
+      await dl.save({
+        filename: name,
+        data: blob
+      });
+    } catch (e) {
+      if (e && e.code !== 'declined') ask(`파일을 저장하지 못했습니다. (${e.code || e.message})\n컴퓨터의 브라우저에서 열면 저장할 수 있습니다.`, {
+        alert: true
+      });
+    }
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 500);
+};
+const saveWorkbook = (wb, name) => {
+  const buf = XLSX.write(wb, {
+    bookType: 'xlsx',
+    type: 'array'
+  });
+  return downloadBlob(new Blob([buf], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  }), name);
+};
+const dialogBus = {
+  set: null,
+  queue: []
+};
+function ask(message, opts = {}) {
+  return new Promise(resolve => {
+    const item = {
+      message,
+      alert: !!opts.alert,
+      okLabel: opts.okLabel,
+      resolve
+    };
+    if (dialogBus.set) dialogBus.set(q => [...q, item]);else dialogBus.queue.push(item);
+  });
+}
+function DialogHost() {
+  const [q, setQ] = useState(dialogBus.queue.splice(0));
+  useEffect(() => {
+    dialogBus.set = setQ;
+    return () => {
+      dialogBus.set = null;
+    };
+  }, []);
+  const cur = q[0];
+  useEffect(() => {
+    if (!cur) return;
+    const h = e => {
+      if (e.key === 'Escape') close(false);
+      if (e.key === 'Enter') close(true);
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  });
+  if (!cur) return null;
+  const close = v => {
+    cur.resolve(cur.alert ? true : v);
+    setQ(x => x.slice(1));
+  };
+  const danger = /삭제|초기화|대체|되돌릴 수 없/.test(cur.message);
+  return React.createElement("div", {
+    className: "fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 anim-fade"
+  }, React.createElement("div", {
+    className: "bg-white w-full max-w-md rounded-3xl shadow-2xl p-6 anim-pop",
+    role: "alertdialog",
+    "aria-modal": "true"
+  }, React.createElement("div", {
+    className: `w-12 h-12 rounded-2xl flex items-center justify-center text-xl mb-3 ${cur.alert ? 'bg-sky-50 text-sky-600' : danger ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`
+  }, React.createElement("i", {
+    className: `fa-solid ${cur.alert ? 'fa-circle-info' : danger ? 'fa-triangle-exclamation' : 'fa-circle-question'}`
+  })), React.createElement("p", {
+    className: "text-lg font-bold whitespace-pre-line leading-relaxed"
+  }, cur.message), React.createElement("div", {
+    className: "flex justify-end gap-2 mt-5"
+  }, !cur.alert && React.createElement("button", {
+    className: "btn btn-outline",
+    onClick: () => close(false)
+  }, "\uCDE8\uC18C"), React.createElement("button", {
+    autoFocus: true,
+    className: `btn ${danger && !cur.alert ? 'bg-rose-600 text-white hover:bg-rose-700' : 'btn-primary'}`,
+    onClick: () => close(true)
+  }, cur.okLabel || '확인'))));
+}
+function fireConfetti() {
+  if (typeof confetti !== 'function') return;
+  const base = {
+    zIndex: 9999,
+    disableForReducedMotion: true
+  };
+  confetti({
+    ...base,
+    particleCount: 170,
+    spread: 100,
+    startVelocity: 48,
+    origin: {
+      y: 0.65
+    }
+  });
+  setTimeout(() => {
+    confetti({
+      ...base,
+      particleCount: 80,
+      angle: 60,
+      spread: 70,
+      origin: {
+        x: 0,
+        y: 0.75
+      }
+    });
+    confetti({
+      ...base,
+      particleCount: 80,
+      angle: 120,
+      spread: 70,
+      origin: {
+        x: 1,
+        y: 0.75
+      }
+    });
+  }, 220);
+}
+const TEAMS = [{
+  name: '청팀',
+  icon: 'fa-water',
+  bg: 'bg-blue-600',
+  soft: 'bg-blue-50',
+  text: 'text-blue-700',
+  border: 'border-blue-200'
+}, {
+  name: '백팀',
+  icon: 'fa-snowflake',
+  bg: 'bg-slate-400',
+  soft: 'bg-slate-50',
+  text: 'text-slate-600',
+  border: 'border-slate-200'
+}, {
+  name: '홍팀',
+  icon: 'fa-fire',
+  bg: 'bg-rose-600',
+  soft: 'bg-rose-50',
+  text: 'text-rose-700',
+  border: 'border-rose-200'
+}, {
+  name: '황팀',
+  icon: 'fa-sun',
+  bg: 'bg-amber-400',
+  soft: 'bg-amber-50',
+  text: 'text-amber-700',
+  border: 'border-amber-200'
+}, {
+  name: '녹팀',
+  icon: 'fa-leaf',
+  bg: 'bg-emerald-600',
+  soft: 'bg-emerald-50',
+  text: 'text-emerald-700',
+  border: 'border-emerald-200'
+}, {
+  name: '자팀',
+  icon: 'fa-gem',
+  bg: 'bg-violet-600',
+  soft: 'bg-violet-50',
+  text: 'text-violet-700',
+  border: 'border-violet-200'
+}];
+const NAV = [{
+  id: 'today',
+  label: '오늘의 수업',
+  short: '오늘',
+  icon: 'fa-chalkboard-user'
+}, {
+  id: 'teams',
+  label: '팀 구성',
+  short: '팀',
+  icon: 'fa-people-group'
+}, {
+  id: 'progress',
+  label: '전체 진도표',
+  short: '진도표',
+  icon: 'fa-table-cells'
+}, {
+  id: 'curriculum',
+  label: '교육과정 상세',
+  short: '교육과정',
+  icon: 'fa-book-open'
+}, {
+  id: 'memo',
+  label: '수업 메모장',
+  short: '메모',
+  icon: 'fa-note-sticky'
+}, {
+  id: 'equipment',
+  label: '교구 관리',
+  short: '교구',
+  icon: 'fa-basketball'
+}];
+const SEED_G3 = [['운동 - 건강한 생활', '바른 자세와 건강', '바른 자세 릴레이 게임', '매트, 타이머'], ['운동 - 건강한 생활', '나의 체력 알아보기', '체력 미션 빙고', '콘, 타이머'], ['운동 - 건강한 생활', '심폐지구력 기르기', '꼬리잡기 술래놀이', '조끼, 콘'], ['운동 - 건강한 생활', '근력과 유연성 기르기', '동물 흉내 서킷', '매트, 콘'], ['운동 - 건강한 생활', '줄넘기로 체력 다지기', '줄넘기 릴레이', '줄넘기, 타이머'], ['운동 - 건강한 생활', '나의 체력 운동 계획', '모둠 체력 챌린지', '줄넘기, 콘, 매트'], ['스포츠 - 영역형 게임', '공 주고받기 기초', '패스 10회 성공 게임', '피구공, 콘'], ['스포츠 - 영역형 게임', '이동하며 공 주고받기', '징검다리 패스', '피구공, 조끼'], ['스포츠 - 영역형 게임', '드리블 기초', '드리블 술래잡기', '농구공, 콘'], ['스포츠 - 영역형 게임', '빈 공간으로 이동하기', '공간 차지 게임', '조끼, 콘, 피구공'], ['스포츠 - 영역형 게임', '골 넣기 게임', '미니 골대 슛 게임', '농구공, 콘, 조끼'], ['스포츠 - 영역형 게임', '영역형 간이 게임', '3대3 간이 농구', '농구공, 조끼'], ['스포츠 - 영역형 게임', '영역형 게임 리그', '모둠 리그전', '농구공, 조끼, 타이머'], ['스포츠 - 필드형 게임', '공 던지기와 받기', '거리 던지기 챌린지', '테니스공, 콘'], ['스포츠 - 필드형 게임', '굴러오는 공 잡기', '수비 벽 게임', '피구공, 콘'], ['스포츠 - 필드형 게임', '티볼 치기 기초', '티 배팅 과녁 맞히기', '티볼 세트, 콘'], ['스포츠 - 필드형 게임', '베이스 달리기', '베이스 릴레이', '베이스, 콘'], ['스포츠 - 필드형 게임', '필드형 간이 게임', '발야구 게임', '피구공, 베이스'], ['스포츠 - 필드형 게임', '필드형 게임 리그', '티볼 리그전', '티볼 세트, 베이스, 조끼'], ['표현 - 움직임 표현', '몸으로 표현하기', '거울 놀이', '음악 스피커'], ['표현 - 움직임 표현', '느낌 살려 움직이기', '동작 이어가기 게임', '음악 스피커, 스카프'], ['표현 - 움직임 표현', '리듬에 맞춰 걷고 뛰기', '리듬 술래잡기', '음악 스피커, 리듬 막대'], ['표현 - 움직임 표현', '모둠 움직임 만들기', '모둠 작품 만들기', '음악 스피커, 스카프'], ['표현 - 움직임 표현', '움직임 표현 발표회', '작품 발표와 감상', '음악 스피커'], ['안전 - 생활 안전', '체육 활동 안전 수칙', '안전 OX 퀴즈', '안전 카드'], ['안전 - 생활 안전', '운동 중 응급 상황', '응급 상황 역할극', '구급상자, 매트'], ['안전 - 생활 안전', '계절별 놀이 안전', '안전 골든벨', '화이트보드'], ['운동 - 건강한 생활', '2학기 체력 다시 재기', '체력 성장 비교 게임', '줄넘기, 콘, 타이머'], ['운동 - 건강한 생활', '2학기 마무리 한마당', '반 대항 한마당 놀이', '조끼, 피구공, 콘']];
+const SEED_G5 = [['운동 - 체력 증진', '건강 체력 측정하기(PAPS)', '체력 측정 순환 코스', '줄자, 매트, 타이머'], ['운동 - 체력 증진', '심폐지구력 향상 운동', '왕복 오래달리기 챌린지', '콘, 타이머, 음악 스피커'], ['운동 - 체력 증진', '근력·근지구력 운동', '모둠 서킷 트레이닝', '매트, 탄력밴드'], ['운동 - 체력 증진', '유연성 향상 운동', '스트레칭 요가 릴레이', '매트'], ['운동 - 체력 증진', '순발력 운동', '사다리 스텝 대결', '스피드 사다리, 콘'], ['운동 - 체력 증진', '나만의 체력 운동 계획', '체력 운동 미션 카드', '미션 카드, 타이머'], ['스포츠 - 네트형 게임', '배드민턴 그립과 자세', '셔틀콕 띄우기 대결', '배드민턴 라켓, 셔틀콕'], ['스포츠 - 네트형 게임', '하이클리어 치기', '랠리 이어가기', '배드민턴 라켓, 셔틀콕'], ['스포츠 - 네트형 게임', '서비스 넣기', '과녁 서비스 게임', '배드민턴 라켓, 셔틀콕, 콘'], ['스포츠 - 네트형 게임', '배구 언더핸드 패스', '원형 패스 게임', '배구공, 콘'], ['스포츠 - 네트형 게임', '배구 토스', '토스 릴레이', '배구공'], ['스포츠 - 네트형 게임', '네트형 간이 게임', '캐치볼 배구', '배구공, 네트'], ['스포츠 - 네트형 게임', '네트형 게임 리그', '모둠 리그전', '배구공, 네트, 조끼'], ['스포츠 - 영역형 게임', '축구 드리블', '드리블 콘 슬라럼', '축구공, 콘'], ['스포츠 - 영역형 게임', '인사이드 패스', '패스 게이트 통과', '축구공, 콘'], ['스포츠 - 영역형 게임', '슛과 골키퍼', '승부차기 대결', '축구공, 골대'], ['스포츠 - 영역형 게임', '공간을 활용한 공격', '4대2 볼 뺏기', '축구공, 조끼, 콘'], ['스포츠 - 영역형 게임', '협력 수비', '지역 수비 게임', '축구공, 조끼'], ['스포츠 - 영역형 게임', '영역형 간이 게임', '플래그 풋볼', '플래그 벨트, 럭비공'], ['스포츠 - 영역형 게임', '영역형 게임 리그', '미니 축구 리그', '축구공, 조끼, 골대'], ['스포츠 - 동작 도전', '앞구르기·뒤구르기', '구르기 릴레이', '매트'], ['스포츠 - 동작 도전', '뜀틀 넘기 기초', '도움닫기 챌린지', '뜀틀, 구름판, 매트'], ['스포츠 - 동작 도전', '줄넘기 기술 도전', '줄넘기 급수제', '줄넘기'], ['스포츠 - 동작 도전', '플라잉디스크 던지기', '디스크 과녁 맞히기', '플라잉디스크, 훌라후프'], ['표현 - 민속 표현', '우리나라 민속 무용', '강강술래', '음악 스피커'], ['표현 - 민속 표현', '세계 민속 무용', '포크댄스 짝 바꾸기', '음악 스피커'], ['표현 - 주제 표현', '주제 표현 만들기', '모둠 작품 구상', '음악 스피커, 스카프'], ['표현 - 주제 표현', '주제 표현 발표', '발표와 감상', '음악 스피커'], ['안전 - 운동 안전', '운동 손상 예방', '안전 체조 따라하기', '매트'], ['안전 - 운동 안전', '응급처치와 심폐소생술', 'CPR 실습', '애니 인형, 구급상자'], ['안전 - 운동 안전', '겨울철 빙상·설상 안전', '안전 골든벨', '화이트보드'], ['운동 - 체력 증진', '2학기 체력 재측정', '체력 성장 그래프 만들기', '줄자, 매트, 타이머'], ['스포츠 - 필드형 게임', '체육 한마당', '반 대항 티볼 대회', '티볼 세트, 베이스, 조끼']];
+const EDUTECH = ['동작 촬영 태블릿 피드백', '패들렛 소감 나누기', '온라인 타이머', 'QR 미션 카드', '띵커벨 퀴즈', '심박수 측정 앱'];
+function mulberry32(a) {
+  return function () {
+    a |= 0;
+    a = a + 0x6d2b79f5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function makeLesson(id, n, [unit, topic, game, materials]) {
+  return {
+    id,
+    lessonNumber: n,
+    unit,
+    topic,
+    objective: `${topic}에 필요한 기본 움직임을 익히고 친구와 협력하며 즐겁게 참여한다.`,
+    mainActivity: `1. 준비 운동 및 ${topic} 시범 관찰\n2. ${topic} 단계별 연습 (개인 → 짝 → 모둠)\n3. 게임 활동: ${game}\n4. 정리 운동 및 배운 점 나누기`,
+    gameActivity: game,
+    materials,
+    assessment: `${topic} 활동에 적극적으로 참여하며 규칙과 안전 수칙을 지키는가?`,
+    edutech: EDUTECH[n % EDUTECH.length]
+  };
+}
+function buildSeed() {
+  const rng = mulberry32(2026);
+  const pick = arr => arr[Math.floor(rng() * arr.length)];
+  const SUR = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', '황', '안', '송', '류', '홍'];
+  const MN = ['민준', '서준', '도윤', '예준', '시우', '하준', '주원', '지호', '지후', '준우', '준서', '건우', '현우', '우진', '선우', '연우', '유준', '정우', '승우', '승현', '시윤', '은우'];
+  const FN = ['서연', '서윤', '지우', '서현', '하은', '하윤', '민서', '지유', '윤서', '채원', '지민', '수아', '지아', '다은', '예은', '수빈', '소율', '예린', '시은', '하린', '아린', '유나'];
+  const MEMOS = ['공 부족으로 2인 1조 진행', '비가 와서 강당에서 진행함', '집중도 좋음, 게임 시간이 부족했음', '규칙 설명을 두 번 함 — 시범 먼저 보이기', '모둠 간 다툼이 있어 중재함', '준비운동 시간을 늘림'];
+  const NEXTS = ['던지기 거리 복습 필요', '지난 시간 미완성 모둠 발표 먼저', '안전 수칙 다시 강조하기', '팀 재편성 필요', '줄 서는 방법 정리'];
+  const sy = {
+    id: 'sy_2026',
+    year: '2026학년도',
+    isCurrent: true
+  };
+  const d = {
+    version: 1,
+    _updatedAt: 0,
+    schoolYears: [sy],
+    grades: [],
+    classes: [],
+    curriculums: [],
+    classProgressCursors: {},
+    lessonRecords: {},
+    equipment: [],
+    students: [],
+    classLessonOrders: {},
+    attendance: {},
+    teamResults: {}
+  };
+  const plan = [{
+    n: 3,
+    count: 4,
+    src: SEED_G3,
+    cursors: [13, 12, 13, 11]
+  }, {
+    n: 5,
+    count: 3,
+    src: SEED_G5,
+    cursors: [9, 10, 9]
+  }];
+  plan.forEach(p => {
+    const gid = `g_${p.n}`,
+      cid = `curr_${p.n}`;
+    d.grades.push({
+      id: gid,
+      schoolYearId: sy.id,
+      gradeNumber: p.n,
+      displayName: `${p.n}학년`,
+      active: true,
+      curriculumId: cid
+    });
+    const lessons = p.src.map((t, i) => makeLesson(`l_${p.n}_${i + 1}`, i + 1, t));
+    d.curriculums.push({
+      id: cid,
+      schoolYearId: sy.id,
+      gradeId: gid,
+      semester: '2학기',
+      title: `${p.n}학년 2학기 체육 교육과정`,
+      totalLessons: lessons.length,
+      lessons
+    });
+    for (let k = 1; k <= p.count; k++) {
+      const clsId = `c_${p.n}_${k}`;
+      d.classes.push({
+        id: clsId,
+        gradeId: gid,
+        classNumber: k,
+        displayName: `${p.n}-${k}`,
+        active: true
+      });
+      const cur = p.cursors[k - 1];
+      d.classProgressCursors[clsId] = cur;
+      for (let j = 1; j < cur; j++) {
+        const l = lessons[j - 1];
+        const r = {
+          classId: clsId,
+          lessonId: l.id,
+          status: 'COMPLETE',
+          date: addDays('2026-09-01', Math.floor((j - 1) * 3.5) + k - 1),
+          memo: '',
+          nextMemo: ''
+        };
+        if (rng() < 0.3) r.memo = pick(MEMOS);
+        if (rng() < 0.22) r.nextMemo = pick(NEXTS);
+        d.lessonRecords[recKey(clsId, l.id)] = r;
+      }
+      const used = new Set();
+      const ids = [];
+      for (let s = 1; s <= 22; s++) {
+        const gender = rng() < 0.5 ? 'M' : 'F';
+        let name;
+        let guard = 0;
+        do {
+          name = pick(SUR) + pick(gender === 'M' ? MN : FN);
+          guard++;
+        } while (used.has(name) && guard < 50);
+        used.add(name);
+        const id = `st_${p.n}_${k}_${s}`;
+        ids.push(id);
+        d.students.push({
+          id,
+          classId: clsId,
+          studentNumber: s,
+          name,
+          gender,
+          skillLevel: 1 + Math.floor(rng() * 5),
+          conflicts: []
+        });
+      }
+      for (let c = 0; c < 2; c++) {
+        const a = d.students.find(x => x.id === pick(ids));
+        const b = d.students.find(x => x.id === pick(ids));
+        if (a && b && a.id !== b.id) {
+          a.conflicts.push(b.id);
+          b.conflicts.push(a.id);
+        }
+      }
+    }
+  });
+  d.equipment = [['농구공', 18], ['피구공', 12], ['축구공', 14], ['배구공', 8], ['배드민턴 라켓', 24], ['셔틀콕', 30], ['콘', 40], ['조끼', 30], ['줄넘기', 30], ['매트', 12], ['티볼 세트', 3, 2], ['베이스', 8, 4], ['테니스공', 20], ['플라잉디스크', 6], ['훌라후프', 15], ['타이머', 4, 1], ['음악 스피커', 2, 1], ['뜀틀', 2, 1], ['스카프', 25], ['네트', 2, 1]].map(([name, quantity, alertBelow], i) => ({
+    id: `eq_${i + 1}`,
+    name,
+    quantity,
+    alertBelow: alertBelow ?? 10
+  }));
+  return d;
+}
+function normalize(d) {
+  const base = {
+    version: 1,
+    _updatedAt: 0,
+    schoolYears: [],
+    grades: [],
+    classes: [],
+    curriculums: [],
+    classProgressCursors: {},
+    lessonRecords: {},
+    equipment: [],
+    students: [],
+    classLessonOrders: {},
+    attendance: {},
+    teamResults: {}
+  };
+  const out = {
+    ...base,
+    ...(d || {})
+  };
+  ['schoolYears', 'grades', 'classes', 'curriculums', 'equipment', 'students'].forEach(k => {
+    if (!Array.isArray(out[k])) out[k] = [];
+  });
+  ['classProgressCursors', 'lessonRecords', 'classLessonOrders', 'attendance', 'teamResults'].forEach(k => {
+    if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {};
+  });
+  out.curriculums.forEach(c => {
+    if (!Array.isArray(c.lessons)) c.lessons = [];
+  });
+  return out;
+}
+function loadData() {
+  try {
+    const s = LS.get(STORAGE_KEY);
+    if (s) return normalize(JSON.parse(s));
+  } catch (e) {}
+  return buildSeed();
+}
+function loadUi() {
+  try {
+    return {
+      view: 'today',
+      scale: 1,
+      ...JSON.parse(LS.get(UI_KEY) || '{}')
+    };
+  } catch (e) {
+    return {
+      view: 'today',
+      scale: 1
+    };
+  }
+}
+const sortClasses = arr => [...arr].sort((a, b) => a.classNumber - b.classNumber);
+function getCurriculumByGrade(d, grade) {
+  return grade ? d.curriculums.find(c => c.id === grade.curriculumId) : null;
+}
+function getCurriculumForClass(d, classId) {
+  const c = d.classes.find(x => x.id === classId);
+  const g = c && d.grades.find(x => x.id === c.gradeId);
+  return getCurriculumByGrade(d, g);
+}
+function getSequence(d, classId, curr) {
+  const base = curr ? curr.lessons : [];
+  const custom = d.classLessonOrders[classId];
+  if (!custom || !custom.length) return base;
+  const map = new Map(base.map(l => [l.id, l]));
+  const seq = custom.map(id => map.get(id)).filter(Boolean);
+  const used = new Set(seq.map(l => l.id));
+  base.forEach(l => {
+    if (!used.has(l.id)) seq.push(l);
+  });
+  return seq;
+}
+const seqForClass = (d, classId) => getSequence(d, classId, getCurriculumForClass(d, classId));
+const getCursor = (d, classId) => Math.max(1, d.classProgressCursors[classId] || 1);
+function applyCursor(d, classId, pos) {
+  const seq = seqForClass(d, classId);
+  d.classProgressCursors[classId] = Math.max(1, Math.min(pos, seq.length + 1));
+  seq.forEach((l, i) => {
+    const r = d.lessonRecords[recKey(classId, l.id)];
+    if (r) r.status = i < pos - 1 ? 'COMPLETE' : 'PENDING';
+  });
+}
+function materialWarnings(materials, equipment) {
+  const out = [];
+  const seen = new Set();
+  splitMaterials(materials).forEach(t => {
+    const a = norm(t);
+    const e = equipment.find(eq => {
+      const b = norm(eq.name);
+      return a && b && (a.includes(b) || b.includes(a));
+    });
+    if (e && !seen.has(e.id) && Number(e.quantity) < Number(e.alertBelow ?? 10)) {
+      seen.add(e.id);
+      out.push(e);
+    }
+  });
+  return out;
+}
+function removeClassData(d, classIds) {
+  const set = new Set(classIds);
+  d.classes = d.classes.filter(c => !set.has(c.id));
+  d.students = d.students.filter(s => !set.has(s.classId));
+  Object.keys(d.lessonRecords).forEach(k => {
+    if (set.has(d.lessonRecords[k].classId)) delete d.lessonRecords[k];
+  });
+  classIds.forEach(id => {
+    delete d.classProgressCursors[id];
+    delete d.classLessonOrders[id];
+    delete d.attendance[id];
+    delete d.teamResults[id];
+  });
+}
+function getFirebaseConfig() {
+  try {
+    if (typeof window.__firebase_config !== 'undefined' && window.__firebase_config) {
+      return typeof window.__firebase_config === 'string' ? JSON.parse(window.__firebase_config) : window.__firebase_config;
+    }
+  } catch (e) {}
+  try {
+    const s = LS.get(FB_KEY);
+    return s ? JSON.parse(s) : null;
+  } catch (e) {
+    return null;
+  }
+}
+function parseConfigText(text) {
+  const t = String(text || '');
+  const a = t.indexOf('{'),
+    b = t.lastIndexOf('}');
+  if (a < 0 || b < a) throw new Error('{ … } 형태의 구성 객체를 찾을 수 없습니다.');
+  let body = t.slice(a, b + 1);
+  try {
+    return JSON.parse(body);
+  } catch (e) {}
+  body = body.replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":').replace(/'/g, '"').replace(/,\s*}/g, '}');
+  const obj = JSON.parse(body);
+  if (!obj.apiKey || !obj.projectId) throw new Error('apiKey, projectId 항목이 필요합니다.');
+  return obj;
+}
+const hashStr = s => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = h * 31 + s.charCodeAt(i) | 0;
+  return Math.abs(h).toString(36);
+};
+const FIRESTORE_RULES = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /artifacts/{appId}/public/data/pe_master_rooms/{room} {
+      // 동기화 코드(방 이름)를 아는 기기만 읽기·쓰기, 방 목록 조회는 금지
+      allow get, create, update: if request.auth != null;
+    }
+  }
+}`;
+const b64url = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64url = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+function buildConnectLink(cfg, code) {
+  const base = location.href.split('#')[0];
+  return `${base}#pe-connect=${b64url(JSON.stringify({
+    cfg,
+    code
+  }))}`;
+}
+(function readConnectHash() {
+  const m = (location.hash || '').match(/^#pe-connect=([A-Za-z0-9_-]+)/);
+  if (!m) return;
+  try {
+    const o = JSON.parse(unb64url(m[1]));
+    if (o.cfg && o.cfg.apiKey && o.cfg.projectId) LS.set(FB_KEY, JSON.stringify(o.cfg));
+    if (o.code) LS.set(SYNC_KEY, String(o.code).toUpperCase().replace(/[^A-Z0-9_-]/g, ''));
+    window.__peConnected = o.code || true;
+  } catch (e) {
+    window.__peConnected = false;
+  }
+  try {
+    history.replaceState(null, '', location.href.split('#')[0]);
+  } catch (e) {
+    location.hash = '';
+  }
+})();
+async function copyText(t) {
+  try {
+    await navigator.clipboard.writeText(t);
+    return true;
+  } catch (e) {}
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+function DeviceConnectPanel({
+  syncCode,
+  cloud,
+  notify
+}) {
+  const cfg = getFirebaseConfig();
+  const [show, setShow] = useState(false);
+  if (!cfg) return null;
+  const link = buildConnectLink(cfg, syncCode);
+  const isFile = location.protocol === 'file:';
+  let svg = '';
+  if (show && typeof qrcode === 'function') {
+    try {
+      const q = qrcode(0, 'L');
+      q.addData(link);
+      q.make();
+      svg = q.createSvgTag({
+        cellSize: 4,
+        margin: 2,
+        scalable: true
+      });
+    } catch (e) {
+      svg = '';
+    }
+  }
+  return React.createElement("div", {
+    className: "mt-3 rounded-xl border-2 border-emerald-200 bg-emerald-50/60 p-3"
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-center gap-2"
+  }, React.createElement("div", {
+    className: "font-bold mr-auto"
+  }, React.createElement("i", {
+    className: "fa-solid fa-mobile-screen-button text-emerald-600 mr-1.5"
+  }), "\uD578\uB4DC\uD3F0\xB7\uB2E4\uB978 PC \uC5F0\uACB0\uD558\uAE30"), React.createElement("button", {
+    className: "btn btn-dark min-h-[44px]",
+    onClick: () => setShow(s => !s)
+  }, React.createElement("i", {
+    className: "fa-solid fa-qrcode"
+  }), show ? 'QR 숨기기' : 'QR 코드 보기'), React.createElement("button", {
+    className: "btn btn-outline min-h-[44px]",
+    onClick: () => copyText(link).then(ok => notify(ok ? '연결 링크를 복사했습니다. 카톡·메일로 내게 보내 다른 기기에서 여세요.' : '복사하지 못했습니다.', null, ok ? 'success' : 'error'))
+  }, React.createElement("i", {
+    className: "fa-solid fa-link"
+  }), "\uC5F0\uACB0 \uB9C1\uD06C \uBCF5\uC0AC")), React.createElement("p", {
+    className: "text-sm text-slate-600 mt-2"
+  }, "\uB2E4\uB978 \uAE30\uAE30\uC5D0\uC11C \uC774 \uB9C1\uD06C(\uB610\uB294 QR)\uB97C \uC5F4\uBA74 Firebase \uAD6C\uC131\uACFC \uB3D9\uAE30\uD654 \uCF54\uB4DC ", React.createElement("b", {
+    className: "font-mono"
+  }, syncCode), "\uAC00 \uC790\uB3D9 \uC785\uB825\uB418\uC5B4 \uBC14\uB85C \uC5F0\uB3D9\uB429\uB2C8\uB2E4."), isFile && React.createElement("p", {
+    className: "text-sm font-semibold text-amber-700 mt-1"
+  }, React.createElement("i", {
+    className: "fa-solid fa-triangle-exclamation mr-1"
+  }), "\uC9C0\uAE08\uC740 PC\uC758 \uD30C\uC77C(file://)\uB85C \uC5F4\uB824 \uC788\uC5B4 \uB9C1\uD06C\uAC00 \uD578\uB4DC\uD3F0\uC5D0\uC11C \uC5F4\uB9AC\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC571\uC744 \uC6F9 \uC8FC\uC18C(\uD638\uC2A4\uD305)\uC5D0 \uC62C\uB9B0 \uB4A4 \uADF8 \uC8FC\uC18C\uC5D0\uC11C QR\uC744 \uB9CC\uB4E4\uC5B4 \uC8FC\uC138\uC694."), show && svg && React.createElement("div", {
+    className: "mt-3 mx-auto w-64 max-w-full bg-white rounded-xl p-2",
+    dangerouslySetInnerHTML: {
+      __html: svg
+    }
+  }), cloud.status === 'error' && React.createElement("p", {
+    className: "text-sm text-rose-600 mt-1"
+  }, "\uD604\uC7AC \uC5F0\uACB0 \uC624\uB958: ", cloud.error));
+}
+function useCloudSync(data, setData, syncCode, cfgVersion) {
+  const [status, setStatus] = useState('local');
+  const [error, setError] = useState('');
+  const [fbState, setFbState] = useState(window.__fb ? 'ready' : window.__fbError ? 'error' : 'loading');
+  const isRemoteUpdateRef = useRef(false);
+  const docRef = useRef(null);
+  const timer = useRef(null);
+  const clientId = useRef(uid('client')).current;
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  useEffect(() => {
+    const ok = () => setFbState('ready');
+    const bad = () => setFbState('error');
+    window.addEventListener('fb-ready', ok);
+    window.addEventListener('fb-error', bad);
+    return () => {
+      window.removeEventListener('fb-ready', ok);
+      window.removeEventListener('fb-error', bad);
+    };
+  }, []);
+  const push = useCallback(d => {
+    const fb = window.__fb;
+    if (!fb || !docRef.current) return;
+    fb.setDoc(docRef.current, {
+      payload: JSON.stringify(d),
+      updatedAt: d._updatedAt || Date.now(),
+      clientId
+    }).catch(e => {
+      setStatus('error');
+      setError(e.code || e.message);
+    });
+  }, [clientId]);
+  useEffect(() => {
+    const cfg = getFirebaseConfig();
+    if (!cfg || !syncCode) {
+      setStatus('local');
+      setError('');
+      return;
+    }
+    if (fbState === 'error') {
+      setStatus('error');
+      setError('Firebase SDK를 불러오지 못했습니다 (네트워크 확인)');
+      return;
+    }
+    if (fbState !== 'ready') {
+      setStatus('connecting');
+      return;
+    }
+    let cancelled = false;
+    let unsub = null;
+    setStatus('connecting');
+    setError('');
+    (async () => {
+      try {
+        const fb = window.__fb;
+        const name = 'pe_' + hashStr(JSON.stringify(cfg));
+        const app = fb.getApps().find(a => a.name === name) || fb.initializeApp(cfg, name);
+        const auth = fb.getAuth(app);
+        if (!auth.currentUser) {
+          const token = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null;
+          if (token) {
+            try {
+              await fb.signInWithCustomToken(auth, token);
+            } catch (e) {
+              await fb.signInAnonymously(auth);
+            }
+          } else {
+            await fb.signInAnonymously(auth);
+          }
+        }
+        if (cancelled) return;
+        const db = fb.getFirestore(app);
+        const ref = fb.doc(db, 'artifacts', APP_ID, 'public', 'data', 'pe_master_rooms', `sync_${syncCode}`);
+        docRef.current = ref;
+        unsub = fb.onSnapshot(ref, snap => {
+          if (cancelled) return;
+          setStatus('connected');
+          setError('');
+          if (!snap.exists()) {
+            push(dataRef.current);
+            return;
+          }
+          const r = snap.data();
+          if (r.clientId === clientId) return;
+          const remoteAt = r.updatedAt || 0,
+            localAt = dataRef.current._updatedAt || 0;
+          if (remoteAt > localAt) {
+            try {
+              const parsed = normalize(JSON.parse(r.payload));
+              isRemoteUpdateRef.current = true;
+              setData(parsed);
+            } catch (e) {}
+          } else if (localAt > remoteAt) push(dataRef.current);
+        }, err => {
+          setStatus('error');
+          setError(err.code || err.message);
+        });
+      } catch (e) {
+        if (!cancelled) {
+          setStatus('error');
+          setError(e.code || e.message);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (unsub) unsub();
+      docRef.current = null;
+    };
+  }, [syncCode, fbState, cfgVersion, push, clientId, setData]);
+  useEffect(() => {
+    if (isRemoteUpdateRef.current) {
+      isRemoteUpdateRef.current = false;
+      return;
+    }
+    if (!docRef.current) return;
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => push(dataRef.current), 250);
+  }, [data, push]);
+  return {
+    status,
+    error
+  };
+}
+const CHUNK = 40000;
+function useClaudeSync(data, setData) {
+  const [state, setState] = useState({
+    status: IN_CLAUDE ? 'connecting' : 'off',
+    error: ''
+  });
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const ctx = useRef({
+    db: null,
+    base: null,
+    lastHashes: [],
+    writing: false,
+    pending: false,
+    remote: false,
+    ready: false
+  });
+  const clientId = useRef(uid('client')).current;
+  const timer = useRef(null);
+  const writeNow = useCallback(async () => {
+    const c = ctx.current;
+    if (!c.db || !c.ready) return;
+    if (c.writing) {
+      c.pending = true;
+      return;
+    }
+    c.writing = true;
+    try {
+      do {
+        c.pending = false;
+        const d = dataRef.current;
+        const s = JSON.stringify(d);
+        const parts = [];
+        for (let i = 0; i < s.length; i += CHUNK) parts.push(s.slice(i, i + CHUNK));
+        const hashes = parts.map(p => `${p.length}-${hashStr(p)}`);
+        for (let i = 0; i < parts.length; i++) {
+          if (c.lastHashes[i] !== hashes[i]) await c.db.doc(`${c.base}/pe_c${i}`).set({
+            s: parts[i],
+            h: hashes[i]
+          });
+        }
+        await c.db.doc(`${c.base}/pe_head`).set({
+          n: parts.length,
+          hashes,
+          updatedAt: d._updatedAt || 0,
+          clientId,
+          v: 1
+        });
+        c.lastHashes = hashes;
+      } while (c.pending);
+      setState({
+        status: 'connected',
+        error: ''
+      });
+    } catch (e) {
+      setState({
+        status: 'error',
+        error: e && (e.code === 'quota_exceeded' ? '저장 공간이 가득 찼습니다' : e.code || e.message) || '저장 실패'
+      });
+    } finally {
+      c.writing = false;
+    }
+  }, [clientId]);
+  useEffect(() => {
+    if (!IN_CLAUDE) return undefined;
+    let unsub = null;
+    let cancelled = false;
+    let fetching = false;
+    const c = ctx.current;
+    const loadTimer = setTimeout(() => {
+      if (!c.ready) setState({
+        status: 'error',
+        error: 'Claude 저장소에 아직 연결하지 못했습니다 (이 기기에 임시 저장 중)'
+      });
+    }, 12000);
+    const connected = () => setState({
+      status: 'connected',
+      error: ''
+    });
+    (async () => {
+      const [db, user] = await Promise.all([claudeCap('db'), claudeCap('user')]);
+      const id = user ? await user.id().catch(() => null) : null;
+      if (cancelled) return;
+      if (!db || !id) {
+        clearTimeout(loadTimer);
+        setState({
+          status: 'error',
+          error: 'Claude 로그인이 필요합니다 (이 기기에만 저장 중)'
+        });
+        return;
+      }
+      c.db = db;
+      c.base = `data/users/${id}`;
+      unsub = db.doc(`${c.base}/pe_head`).onSnapshot(async snap => {
+        if (cancelled) return;
+        if (!snap.exists && snap.metadata && snap.metadata.fromCache) return;
+        clearTimeout(loadTimer);
+        if (!snap.exists) {
+          c.ready = true;
+          connected();
+          writeNow();
+          return;
+        }
+        const h = snap.data();
+        if (h.clientId === clientId && c.ready) {
+          connected();
+          return;
+        }
+        const localAt = dataRef.current._updatedAt || 0;
+        const remoteAt = h.updatedAt || 0;
+        if (remoteAt > localAt) {
+          if (fetching) return;
+          fetching = true;
+          try {
+            const parts = [];
+            for (let i = 0; i < h.n; i++) {
+              const cs = await db.doc(`${c.base}/pe_c${i}`).get();
+              const cd = cs.exists ? cs.data() : null;
+              if (!cd || cd.h !== h.hashes[i]) throw new Error('stale');
+              parts.push(cd.s);
+            }
+            const parsed = normalize(JSON.parse(parts.join('')));
+            if (!cancelled) {
+              c.lastHashes = h.hashes.slice();
+              c.remote = true;
+              setData(parsed);
+            }
+          } catch (e) {} finally {
+            fetching = false;
+          }
+          c.ready = true;
+          connected();
+        } else {
+          c.ready = true;
+          connected();
+          if (localAt > remoteAt) {
+            c.lastHashes = (h.hashes || []).slice();
+            writeNow();
+          }
+        }
+      }, err => {
+        clearTimeout(loadTimer);
+        setState({
+          status: 'error',
+          error: err && err.code || '연결 끊김'
+        });
+      });
+    })();
+    return () => {
+      cancelled = true;
+      clearTimeout(loadTimer);
+      if (unsub) unsub();
+    };
+  }, [clientId, setData, writeNow]);
+  useEffect(() => {
+    const c = ctx.current;
+    if (c.remote) {
+      c.remote = false;
+      return;
+    }
+    if (!c.ready) return;
+    clearTimeout(timer.current);
+    timer.current = setTimeout(writeNow, 600);
+  }, [data, writeNow]);
+  return state;
+}
+function Modal({
+  open = true,
+  onClose,
+  title,
+  icon,
+  children,
+  footer,
+  size = 'md'
+}) {
+  useEffect(() => {
+    const h = e => {
+      if (e.key === 'Escape' && onClose) onClose();
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [onClose]);
+  if (!open) return null;
+  const w = {
+    sm: 'sm:max-w-md',
+    md: 'sm:max-w-2xl',
+    lg: 'sm:max-w-4xl',
+    xl: 'sm:max-w-6xl'
+  }[size];
+  return React.createElement("div", {
+    className: "fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm sm:p-4 anim-fade",
+    onMouseDown: e => {
+      if (e.target === e.currentTarget && onClose) onClose();
+    }
+  }, React.createElement("div", {
+    className: `bg-white w-full ${w} max-h-[94vh] flex flex-col rounded-t-3xl sm:rounded-3xl shadow-2xl anim-pop`
+  }, React.createElement("div", {
+    className: "flex items-center gap-3 px-5 py-3 border-b border-slate-100"
+  }, icon && React.createElement("span", {
+    className: "w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"
+  }, React.createElement("i", {
+    className: `fa-solid ${icon}`
+  })), React.createElement("h3", {
+    className: "text-lg sm:text-xl font-black flex-1 min-w-0 truncate"
+  }, title), React.createElement("button", {
+    className: "btn-icon",
+    onClick: onClose,
+    "aria-label": "\uB2EB\uAE30"
+  }, React.createElement("i", {
+    className: "fa-solid fa-xmark text-xl"
+  }))), React.createElement("div", {
+    className: "overflow-y-auto p-5 flex-1 overscroll-contain"
+  }, children), footer && React.createElement("div", {
+    className: "px-5 py-3 border-t border-slate-100 flex flex-wrap justify-end gap-2 pb-safe"
+  }, footer)));
+}
+function Stars({
+  value,
+  onChange,
+  size = 'text-base'
+}) {
+  return React.createElement("span", {
+    className: "inline-flex items-center"
+  }, [1, 2, 3, 4, 5].map(n => onChange ? React.createElement("button", {
+    key: n,
+    type: "button",
+    onClick: () => onChange(n),
+    className: `w-8 h-10 ${size} ${n <= value ? 'text-amber-400' : 'text-slate-200'} hover:scale-110 transition`,
+    "aria-label": `${n}점`
+  }, React.createElement("i", {
+    className: "fa-solid fa-star"
+  })) : React.createElement("i", {
+    key: n,
+    className: `fa-solid fa-star ${size} ${n <= value ? 'text-amber-400' : 'text-slate-200'}`
+  })));
+}
+function Empty({
+  icon = 'fa-inbox',
+  title,
+  desc,
+  action
+}) {
+  return React.createElement("div", {
+    className: "card p-10 text-center flex flex-col items-center gap-3"
+  }, React.createElement("div", {
+    className: "w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-2xl"
+  }, React.createElement("i", {
+    className: `fa-solid ${icon}`
+  })), React.createElement("div", {
+    className: "text-xl font-black"
+  }, title), desc && React.createElement("p", {
+    className: "text-slate-500 max-w-md"
+  }, desc), action);
+}
+function AutoSaveTextarea({
+  value,
+  onSave,
+  placeholder,
+  rows = 2,
+  className = ''
+}) {
+  const [v, setV] = useState(value || '');
+  const focused = useRef(false);
+  const t = useRef(null);
+  const saveRef = useRef(onSave);
+  saveRef.current = onSave;
+  useEffect(() => {
+    if (!focused.current) setV(value || '');
+  }, [value]);
+  useEffect(() => () => clearTimeout(t.current), []);
+  return React.createElement("textarea", {
+    value: v,
+    rows: rows,
+    placeholder: placeholder,
+    className: `textarea ${className}`,
+    onFocus: () => {
+      focused.current = true;
+    },
+    onChange: e => {
+      const nv = e.target.value;
+      setV(nv);
+      clearTimeout(t.current);
+      t.current = setTimeout(() => saveRef.current(nv), 700);
+    },
+    onBlur: () => {
+      focused.current = false;
+      clearTimeout(t.current);
+      if (v !== (value || '')) saveRef.current(v);
+    }
+  });
+}
+function InlineInput({
+  value,
+  onCommit,
+  className = '',
+  ...rest
+}) {
+  const [v, setV] = useState(value ?? '');
+  useEffect(() => setV(value ?? ''), [value]);
+  return React.createElement("input", _extends({
+    value: v,
+    onChange: e => setV(e.target.value),
+    onBlur: () => {
+      if (String(v) !== String(value ?? '')) onCommit(v);
+    },
+    onKeyDown: e => {
+      if (e.key === 'Enter') e.currentTarget.blur();
+    },
+    className: `input ${className}`
+  }, rest));
+}
+function Toast({
+  toast,
+  onClose
+}) {
+  if (!toast) return null;
+  const tone = toast.type === 'error' ? 'bg-rose-600' : toast.type === 'info' ? 'bg-slate-800' : 'bg-emerald-700';
+  return React.createElement("div", {
+    className: "fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-6 z-[60] w-[calc(100%-1.5rem)] max-w-xl anim-pop"
+  }, React.createElement("div", {
+    className: `${tone} text-white rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3`
+  }, React.createElement("i", {
+    className: `fa-solid ${toast.type === 'error' ? 'fa-circle-exclamation' : toast.type === 'info' ? 'fa-circle-info' : 'fa-circle-check'} text-xl`
+  }), React.createElement("div", {
+    className: "flex-1 font-semibold"
+  }, toast.msg), toast.action && React.createElement("button", {
+    className: "h-11 px-4 rounded-xl bg-white/20 hover:bg-white/30 font-bold",
+    onClick: () => {
+      toast.action.fn();
+      onClose();
+    }
+  }, toast.action.label), React.createElement("button", {
+    className: "w-10 h-10 rounded-xl hover:bg-white/20",
+    onClick: onClose,
+    "aria-label": "\uB2EB\uAE30"
+  }, React.createElement("i", {
+    className: "fa-solid fa-xmark"
+  }))));
+}
+function findScrollParent(el) {
+  let p = el && el.parentElement;
+  while (p && p !== document.body) {
+    const s = getComputedStyle(p);
+    if (/(auto|scroll)/.test(s.overflowY) && p.scrollHeight > p.clientHeight) return p;
+    p = p.parentElement;
+  }
+  return document.scrollingElement || document.documentElement;
+}
+function SortableList({
+  items,
+  onReorder,
+  renderItem,
+  isLocked = () => false,
+  gap = 8
+}) {
+  const refs = useRef({});
+  const st = useRef(null);
+  const [drag, setDrag] = useState(null);
+  const compute = () => {
+    const s = st.current;
+    if (!s) return;
+    const dy = s.lastY - s.startY + (s.sp.scrollTop - s.startScroll);
+    const r = s.rects[s.from];
+    const center = r.top + r.height / 2 + dy;
+    let idx = 0;
+    s.rects.forEach((ri, i) => {
+      if (i !== s.from && ri && center > ri.top + ri.height / 2) idx++;
+    });
+    s.to = Math.max(idx, s.minIndex);
+    setDrag({
+      id: s.id,
+      from: s.from,
+      to: s.to,
+      dy
+    });
+  };
+  const loop = () => {
+    const s = st.current;
+    if (!s) return;
+    const sp = s.sp;
+    const isDoc = sp === document.scrollingElement || sp === document.documentElement;
+    let top = 0,
+      bottom = window.innerHeight;
+    if (isDoc) {
+      const h = document.querySelector('header');
+      top = h ? Math.max(0, h.getBoundingClientRect().bottom) : 0;
+    } else {
+      const rr = sp.getBoundingClientRect();
+      top = rr.top;
+      bottom = rr.bottom;
+    }
+    const edge = 70;
+    let v = 0;
+    if (s.lastY < top + edge) v = -Math.ceil((top + edge - s.lastY) / 5);else if (s.lastY > bottom - edge) v = Math.ceil((s.lastY - (bottom - edge)) / 5);
+    if (v) {
+      const before = sp.scrollTop;
+      sp.scrollTop += v;
+      if (sp.scrollTop !== before) compute();
+    }
+    s.raf = requestAnimationFrame(loop);
+  };
+  const onDown = (e, id, index) => {
+    if (isLocked(index)) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    const rects = items.map(it => refs.current[it.id] ? refs.current[it.id].getBoundingClientRect() : null);
+    let minIndex = 0;
+    while (minIndex < items.length && isLocked(minIndex)) minIndex++;
+    const sp = findScrollParent(refs.current[id]);
+    st.current = {
+      id,
+      from: index,
+      to: index,
+      startY: e.clientY,
+      lastY: e.clientY,
+      rects,
+      sp,
+      startScroll: sp.scrollTop,
+      minIndex,
+      raf: 0
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {}
+    setDrag({
+      id,
+      from: index,
+      to: index,
+      dy: 0
+    });
+    st.current.raf = requestAnimationFrame(loop);
+  };
+  const onMove = e => {
+    if (!st.current) return;
+    st.current.lastY = e.clientY;
+    compute();
+  };
+  const onUp = () => {
+    const s = st.current;
+    if (!s) return;
+    cancelAnimationFrame(s.raf);
+    st.current = null;
+    setDrag(null);
+    if (s.to !== s.from) onReorder(moveItem(items, s.from, s.to).map(x => x.id), s.from, s.to);
+  };
+  const shift = i => {
+    if (!drag || !st.current) return 0;
+    const {
+      from,
+      to
+    } = drag;
+    const h = st.current.rects[from].height + gap;
+    if (from < to && i > from && i <= to) return -h;
+    if (from > to && i >= to && i < from) return h;
+    return 0;
+  };
+  return React.createElement("div", {
+    className: "flex flex-col",
+    style: {
+      gap
+    }
+  }, items.map((it, i) => {
+    const dragging = drag && drag.id === it.id;
+    const locked = isLocked(i);
+    const style = dragging ? {
+      transform: `translateY(${drag.dy}px) scale(1.015)`,
+      zIndex: 30,
+      position: 'relative',
+      transition: 'none'
+    } : {
+      transform: `translateY(${shift(i)}px)`,
+      transition: drag ? 'transform 180ms ease' : 'none',
+      position: 'relative'
+    };
+    const handleProps = {
+      onPointerDown: e => onDown(e, it.id, i),
+      onPointerMove: onMove,
+      onPointerUp: onUp,
+      onPointerCancel: onUp,
+      style: {
+        touchAction: 'none',
+        cursor: locked ? 'not-allowed' : dragging ? 'grabbing' : 'grab'
+      },
+      'aria-label': locked ? '완료된 차시(고정)' : '끌어서 순서 이동',
+      type: 'button'
+    };
+    return React.createElement("div", {
+      key: it.id,
+      ref: el => {
+        refs.current[it.id] = el;
+      },
+      style: style,
+      className: dragging ? 'sortable-dragging' : ''
+    }, renderItem(it, i, {
+      handleProps,
+      dragging,
+      locked
+    }));
+  }));
+}
+function Header({
+  ui,
+  setUi,
+  years,
+  yearId,
+  yearGrades,
+  grade,
+  cloud,
+  syncCode,
+  onSyncCode,
+  onSettings
+}) {
+  const [code, setCode] = useState(syncCode);
+  useEffect(() => setCode(syncCode), [syncCode]);
+  const ST = {
+    local: {
+      dot: 'bg-slate-400',
+      label: '로컬 저장',
+      tip: '설정에서 Firebase를 연결하면 기기 간 실시간 동기화됩니다.'
+    },
+    connecting: {
+      dot: 'bg-amber-400 animate-pulse',
+      label: '연결 중…'
+    },
+    connected: {
+      dot: 'bg-emerald-500',
+      ping: true,
+      label: cloud.mode === 'claude' ? 'Claude 계정 연동' : '실시간 연동'
+    },
+    error: {
+      dot: 'bg-rose-500',
+      label: '연동 오류'
+    },
+    off: {
+      dot: 'bg-slate-400',
+      label: '로컬 저장'
+    }
+  }[cloud.status];
+  return React.createElement("header", {
+    className: "sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200"
+  }, React.createElement("div", {
+    className: "max-w-[1900px] mx-auto px-3 sm:px-5"
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-center gap-2 py-2.5"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2.5 mr-auto min-w-0"
+  }, React.createElement("div", {
+    className: "w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/30"
+  }, React.createElement("i", {
+    className: "fa-solid fa-person-running text-xl"
+  })), React.createElement("div", {
+    className: "leading-tight"
+  }, React.createElement("div", {
+    className: "font-black text-lg tracking-tight"
+  }, "PE Master"), React.createElement("div", {
+    className: "text-xs text-slate-500 font-medium"
+  }, todayLabel()))), cloud.mode === 'claude' ? React.createElement("button", {
+    type: "button",
+    onClick: onSettings,
+    title: cloud.error || '같은 Claude 계정으로 연 PC·핸드폰이 자동으로 같은 데이터를 봅니다',
+    className: "flex items-center gap-2 rounded-2xl border-2 border-slate-200 px-3 h-12"
+  }, React.createElement("span", {
+    className: "relative flex h-3 w-3"
+  }, ST.ping && React.createElement("span", {
+    className: "absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping"
+  }), React.createElement("span", {
+    className: `relative inline-flex rounded-full h-3 w-3 ${ST.dot}`
+  })), React.createElement("span", {
+    className: "text-sm font-bold"
+  }, ST.label)) : React.createElement("div", {
+    className: "flex items-center gap-2 rounded-2xl border-2 border-slate-200 pl-3 pr-1 h-12",
+    title: cloud.error || ST.tip || ''
+  }, React.createElement("button", {
+    type: "button",
+    onClick: onSettings,
+    className: "flex items-center gap-2",
+    "aria-label": "\uB3D9\uAE30\uD654 \uC124\uC815"
+  }, React.createElement("span", {
+    className: "relative flex h-3 w-3"
+  }, ST.ping && React.createElement("span", {
+    className: "absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping"
+  }), React.createElement("span", {
+    className: `relative inline-flex rounded-full h-3 w-3 ${ST.dot}`
+  })), React.createElement("span", {
+    className: "text-sm font-bold hidden lg:inline"
+  }, ST.label)), React.createElement("form", {
+    onSubmit: e => {
+      e.preventDefault();
+      onSyncCode(code);
+    },
+    className: "flex items-center"
+  }, React.createElement("input", {
+    value: code,
+    maxLength: 20,
+    "aria-label": "\uB3D9\uAE30\uD654 \uCF54\uB4DC",
+    onChange: e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '')),
+    className: "w-24 h-10 rounded-lg bg-slate-100 px-2 text-center font-mono font-bold tracking-wider focus:outline-none focus:ring-2 focus:ring-emerald-500"
+  }), code !== syncCode && code && React.createElement("button", {
+    className: "ml-1 h-10 px-3 rounded-lg bg-emerald-600 text-white text-sm font-bold"
+  }, "\uC5F0\uACB0"))), React.createElement("select", {
+    value: yearId || '',
+    onChange: e => setUi(u => ({
+      ...u,
+      yearId: e.target.value,
+      gradeId: null
+    })),
+    className: "h-12 rounded-xl border-2 border-slate-200 bg-white px-3 font-bold focus:outline-none focus:border-emerald-500",
+    "aria-label": "\uD559\uB144\uB3C4"
+  }, years.map(y => React.createElement("option", {
+    key: y.id,
+    value: y.id
+  }, y.year, y.isCurrent ? ' ★' : ''))), React.createElement("div", {
+    className: "hidden sm:flex items-center rounded-xl border-2 border-slate-200 h-12"
+  }, React.createElement("button", {
+    className: "w-10 h-full text-slate-500 hover:text-slate-900",
+    onClick: () => setUi(u => ({
+      ...u,
+      scale: Math.max(0.8, +(u.scale - 0.1).toFixed(2))
+    })),
+    "aria-label": "\uAE00\uC790 \uC791\uAC8C"
+  }, React.createElement("i", {
+    className: "fa-solid fa-minus"
+  })), React.createElement("span", {
+    className: "text-xs font-bold text-slate-500 w-10 text-center"
+  }, Math.round((ui.scale || 1) * 100), "%"), React.createElement("button", {
+    className: "w-10 h-full text-slate-500 hover:text-slate-900",
+    onClick: () => setUi(u => ({
+      ...u,
+      scale: Math.min(1.6, +(u.scale + 0.1).toFixed(2))
+    })),
+    "aria-label": "\uAE00\uC790 \uD06C\uAC8C"
+  }, React.createElement("i", {
+    className: "fa-solid fa-plus"
+  }))), React.createElement("button", {
+    className: "btn-icon border-2 border-slate-200",
+    onClick: onSettings,
+    "aria-label": "\uC124\uC815"
+  }, React.createElement("i", {
+    className: "fa-solid fa-gear text-lg"
+  }))), React.createElement("div", {
+    className: "flex items-center gap-3 pb-2.5 overflow-x-auto no-scrollbar"
+  }, React.createElement("div", {
+    className: "flex gap-2 shrink-0"
+  }, yearGrades.map(g => React.createElement("button", {
+    key: g.id,
+    onClick: () => setUi(u => ({
+      ...u,
+      gradeId: g.id
+    })),
+    className: `min-h-[52px] px-6 rounded-2xl text-lg font-black transition active:scale-95 ${grade && grade.id === g.id ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`
+  }, g.displayName)), yearGrades.length === 0 && React.createElement("button", {
+    className: "btn btn-outline",
+    onClick: onSettings
+  }, React.createElement("i", {
+    className: "fa-solid fa-plus"
+  }), " \uB2F4\uB2F9 \uD559\uB144 \uCD94\uAC00")), React.createElement("div", {
+    className: "w-px h-8 bg-slate-200 shrink-0 hidden md:block"
+  }), React.createElement("nav", {
+    className: "hidden md:flex gap-1 shrink-0"
+  }, NAV.map(n => React.createElement("button", {
+    key: n.id,
+    onClick: () => setUi(u => ({
+      ...u,
+      view: n.id
+    })),
+    className: `min-h-[48px] px-4 rounded-xl font-bold flex items-center gap-2 transition ${ui.view === n.id ? 'bg-emerald-50 text-emerald-700 ring-2 ring-emerald-500/30' : 'text-slate-500 hover:bg-slate-100'}`
+  }, React.createElement("i", {
+    className: `fa-solid ${n.icon}`
+  }), n.label))))));
+}
+function MobileNav({
+  view,
+  setUi
+}) {
+  return React.createElement("nav", {
+    className: "md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 pb-safe"
+  }, React.createElement("div", {
+    className: "grid grid-cols-6"
+  }, NAV.map(n => React.createElement("button", {
+    key: n.id,
+    onClick: () => setUi(u => ({
+      ...u,
+      view: n.id
+    })),
+    className: `h-16 flex flex-col items-center justify-center gap-1 text-[11px] font-bold ${view === n.id ? 'text-emerald-600' : 'text-slate-400'}`
+  }, React.createElement("i", {
+    className: `fa-solid ${n.icon} text-lg`
+  }), n.short))));
+}
+function TodayView({
+  data,
+  grade,
+  classes,
+  curr,
+  actions,
+  onOpenOrder,
+  goSettings
+}) {
+  const [boardFor, setBoardFor] = useState(null);
+  if (!grade) return React.createElement(Empty, {
+    icon: "fa-graduation-cap",
+    title: "\uB2F4\uB2F9 \uD559\uB144\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    desc: "\uC124\uC815\uC5D0\uC11C \uD559\uB144\uB3C4\uC640 \uB2F4\uB2F9 \uD559\uB144, \uD559\uAE09\uC744 \uCD94\uAC00\uD558\uC138\uC694.",
+    action: React.createElement("button", {
+      className: "btn btn-primary",
+      onClick: goSettings
+    }, React.createElement("i", {
+      className: "fa-solid fa-gear"
+    }), "\uC124\uC815 \uC5F4\uAE30")
+  });
+  if (!curr || curr.lessons.length === 0) return React.createElement(Empty, {
+    icon: "fa-book-open",
+    title: `${grade.displayName} 교육과정이 비어 있습니다`,
+    desc: "[\uAD50\uC721\uACFC\uC815 \uC0C1\uC138]\uC5D0\uC11C \uCC28\uC2DC\uB97C \uCD94\uAC00\uD558\uAC70\uB098 Excel\uB85C \uAC00\uC838\uC624\uC138\uC694.",
+    action: React.createElement("button", {
+      className: "btn btn-primary",
+      onClick: () => actions.goView('curriculum')
+    }, React.createElement("i", {
+      className: "fa-solid fa-book-open"
+    }), "\uAD50\uC721\uACFC\uC815\uC73C\uB85C \uC774\uB3D9")
+  });
+  if (classes.length === 0) return React.createElement(Empty, {
+    icon: "fa-school",
+    title: "\uD559\uAE09\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    desc: "\uC124\uC815\uC5D0\uC11C \uBC18\uC744 \uCD94\uAC00\uD558\uC138\uC694.",
+    action: React.createElement("button", {
+      className: "btn btn-primary",
+      onClick: goSettings
+    }, "\uC124\uC815 \uC5F4\uAE30")
+  });
+  const boardCls = boardFor && classes.find(c => c.id === boardFor);
+  return React.createElement("div", {
+    className: "space-y-4"
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-end justify-between gap-2"
+  }, React.createElement("div", null, React.createElement("h2", {
+    className: "text-2xl sm:text-3xl font-black"
+  }, "\uC624\uB298\uC758 \uC218\uC5C5 ", React.createElement("span", {
+    className: "text-emerald-600"
+  }, "\xB7 ", grade.displayName)), React.createElement("p", {
+    className: "text-slate-500 font-medium"
+  }, curr.title, " \xB7 \uCD1D ", curr.lessons.length, "\uCC28\uC2DC"))), React.createElement("div", {
+    className: "grid gap-4 lg:grid-cols-2 2xl:grid-cols-3"
+  }, classes.map(c => React.createElement(LessonCard, {
+    key: c.id,
+    cls: c,
+    data: data,
+    actions: actions,
+    onBoard: () => setBoardFor(c.id),
+    onOrder: () => onOpenOrder(c.id)
+  }))), boardCls && React.createElement(BoardModal, {
+    cls: boardCls,
+    data: data,
+    actions: actions,
+    onClose: () => setBoardFor(null)
+  }));
+}
+function LessonCard({
+  cls,
+  data,
+  actions,
+  onBoard,
+  onOrder
+}) {
+  const seq = seqForClass(data, cls.id);
+  const cur = getCursor(data, cls.id);
+  const total = seq.length;
+  const lesson = seq[cur - 1];
+  const done = Math.min(cur - 1, total);
+  const pct = total ? Math.round(done / total * 100) : 0;
+  const rec = lesson ? data.lessonRecords[recKey(cls.id, lesson.id)] || {} : {};
+  const prev = seq[cur - 2];
+  const prevRec = prev ? data.lessonRecords[recKey(cls.id, prev.id)] : null;
+  const next = seq[cur];
+  const [showHist, setShowHist] = useState(false);
+  const history = seq.slice(0, cur - 1).map((l, i) => ({
+    l,
+    pos: i + 1,
+    r: data.lessonRecords[recKey(cls.id, l.id)]
+  })).filter(x => x.r && (x.r.memo || x.r.nextMemo)).reverse();
+  const warnings = lesson ? materialWarnings(lesson.materials, data.equipment) : [];
+  const custom = !!(data.classLessonOrders[cls.id] && data.classLessonOrders[cls.id].length);
+  return React.createElement("div", {
+    className: "card p-4 sm:p-5 flex flex-col gap-4"
+  }, React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, React.createElement("div", {
+    className: "w-16 h-16 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-2xl font-black shrink-0"
+  }, cls.displayName), React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, React.createElement("div", {
+    className: "text-sm font-bold text-slate-400"
+  }, lesson ? '이번 시간' : '진도 완료'), React.createElement("div", {
+    className: "text-3xl font-black leading-none mt-0.5"
+  }, Math.min(cur, total), React.createElement("span", {
+    className: "text-lg text-slate-400 font-bold"
+  }, " / ", total, "\uCC28\uC2DC"))), React.createElement("button", {
+    className: `btn-icon border-2 ${custom ? 'border-violet-300 text-violet-600 bg-violet-50' : 'border-slate-200'}`,
+    onClick: onOrder,
+    title: "\uCC28\uC2DC \uC21C\uC11C \uBCC0\uACBD (\uB4DC\uB798\uADF8)",
+    "aria-label": "\uCC28\uC2DC \uC21C\uC11C \uBCC0\uACBD"
+  }, React.createElement("i", {
+    className: "fa-solid fa-arrow-down-short-wide text-lg"
+  }))), React.createElement("div", null, React.createElement("div", {
+    className: "h-3 rounded-full bg-slate-100 overflow-hidden"
+  }, React.createElement("div", {
+    className: "h-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-500",
+    style: {
+      width: `${pct}%`
+    }
+  })), React.createElement("div", {
+    className: "flex justify-between text-xs font-bold text-slate-400 mt-1"
+  }, React.createElement("span", null, "\uC644\uB8CC ", done, "\uCC28\uC2DC"), React.createElement("span", null, pct, "%"))), lesson ? React.createElement(React.Fragment, null, React.createElement("div", null, React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
+  }, React.createElement("span", {
+    className: "chip bg-sky-50 text-sky-700"
+  }, React.createElement("i", {
+    className: "fa-solid fa-layer-group"
+  }), lesson.unit || '단원 미지정'), lesson.lessonNumber !== cur && React.createElement("span", {
+    className: "chip bg-violet-50 text-violet-700"
+  }, React.createElement("i", {
+    className: "fa-solid fa-shuffle"
+  }), "\uAD50\uC721\uACFC\uC815 ", lesson.lessonNumber, "\uCC28\uC2DC")), React.createElement("h3", {
+    className: "text-2xl font-black mt-2 leading-snug"
+  }, lesson.topic), lesson.objective && React.createElement("p", {
+    className: "text-slate-600 mt-1.5"
+  }, React.createElement("i", {
+    className: "fa-solid fa-bullseye text-rose-400 mr-1.5"
+  }), lesson.objective)), lesson.gameActivity && React.createElement("div", {
+    className: "rounded-2xl bg-amber-50/70 border border-amber-100 px-4 py-2.5"
+  }, React.createElement("span", {
+    className: "text-xs font-black text-amber-600"
+  }, "\uAC8C\uC784/\uD45C\uD604 \uD65C\uB3D9"), React.createElement("div", {
+    className: "font-bold text-amber-900"
+  }, lesson.gameActivity)), splitMaterials(lesson.materials).length > 0 && React.createElement("div", {
+    className: "flex flex-wrap items-center gap-1.5"
+  }, React.createElement("span", {
+    className: "text-sm font-bold text-slate-400 mr-1"
+  }, React.createElement("i", {
+    className: "fa-solid fa-box-open mr-1"
+  }), "\uC900\uBE44\uBB3C"), splitMaterials(lesson.materials).map(m => React.createElement("span", {
+    key: m,
+    className: "chip bg-slate-100 text-slate-700"
+  }, m))), warnings.map(w => React.createElement("div", {
+    key: w.id,
+    className: "rounded-xl bg-amber-50 border border-amber-300 text-amber-800 px-3 py-2 text-sm font-bold"
+  }, "\u26A0\uFE0F [", w.name, "] \uBCF4\uC720 \uBD80\uC871 (", w.quantity, "\uAC1C)")), prevRec && prevRec.nextMemo && React.createElement("div", {
+    className: "rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-800 px-3 py-2 text-sm"
+  }, React.createElement("i", {
+    className: "fa-solid fa-thumbtack mr-1.5"
+  }), React.createElement("b", null, "\uC9C0\uB09C \uC2DC\uAC04 \uCC38\uACE0:"), " ", prevRec.nextMemo), React.createElement("div", {
+    className: "grid sm:grid-cols-2 gap-2"
+  }, React.createElement("div", null, React.createElement("label", {
+    className: "label"
+  }, "\uC774\uBC88 \uC2DC\uAC04 \uBA54\uBAA8"), React.createElement(AutoSaveTextarea, {
+    value: rec.memo,
+    placeholder: "\uC608) \uACF5 \uBD80\uC871\uC73C\uB85C 2\uC778 1\uC870 \uC9C4\uD589",
+    onSave: v => actions.saveMemo(cls.id, lesson.id, 'memo', v)
+  })), React.createElement("div", null, React.createElement("label", {
+    className: "label"
+  }, "\uB2E4\uC74C \uC2DC\uAC04 \uCC38\uACE0\uC0AC\uD56D"), React.createElement(AutoSaveTextarea, {
+    value: rec.nextMemo,
+    placeholder: "\uC608) \uB358\uC9C0\uAE30 \uAC70\uB9AC \uBCF5\uC2B5 \uD544\uC694",
+    onSave: v => actions.saveMemo(cls.id, lesson.id, 'nextMemo', v)
+  }))), history.length > 0 && React.createElement("div", null, React.createElement("button", {
+    className: "text-sm font-bold text-slate-500 hover:text-slate-800 min-h-[44px]",
+    onClick: () => setShowHist(s => !s)
+  }, React.createElement("i", {
+    className: `fa-solid fa-chevron-${showHist ? 'up' : 'down'} mr-1.5`
+  }), "\uC774\uC804 \uBA54\uBAA8 \uC774\uB825 (", history.length, "\uAC74)"), showHist && React.createElement("div", {
+    className: "mt-1 space-y-2 max-h-72 overflow-y-auto pr-1"
+  }, history.map(({
+    l,
+    pos,
+    r
+  }) => React.createElement("div", {
+    key: l.id,
+    className: "rounded-xl bg-slate-50 border border-slate-200 p-3 text-sm"
+  }, React.createElement("div", {
+    className: "font-bold text-slate-700"
+  }, pos, "\uCC28\uC2DC \xB7 ", l.topic, " ", React.createElement("span", {
+    className: "text-slate-400 font-medium ml-1"
+  }, r.date)), r.memo && React.createElement("div", {
+    className: "mt-1 text-slate-600"
+  }, React.createElement("i", {
+    className: "fa-regular fa-note-sticky mr-1"
+  }), r.memo), r.nextMemo && React.createElement("div", {
+    className: "mt-0.5 text-indigo-700"
+  }, React.createElement("i", {
+    className: "fa-solid fa-arrow-right mr-1"
+  }), r.nextMemo))))), React.createElement("div", {
+    className: "grid grid-cols-[auto_1fr] gap-2 mt-auto"
+  }, React.createElement("button", {
+    className: "btn btn-dark px-5",
+    onClick: onBoard
+  }, React.createElement("i", {
+    className: "fa-solid fa-display"
+  }), "\uC218\uC5C5 \uD654\uBA74"), React.createElement("button", {
+    className: "btn btn-primary text-lg min-h-[56px]",
+    onClick: () => actions.complete(cls.id)
+  }, React.createElement("i", {
+    className: "fa-solid fa-check-double"
+  }), "\uC218\uC5C5 \uC644\uB8CC")), next && React.createElement("div", {
+    className: "text-xs font-semibold text-slate-400 -mt-2"
+  }, "\uB2E4\uC74C: ", cur + 1, "\uCC28\uC2DC \xB7 ", next.topic)) : React.createElement("div", {
+    className: "rounded-2xl bg-emerald-50 border border-emerald-200 p-6 text-center"
+  }, React.createElement("div", {
+    className: "text-4xl"
+  }, "\uD83C\uDF89"), React.createElement("div", {
+    className: "text-xl font-black text-emerald-800 mt-1"
+  }, "\uBAA8\uB4E0 \uCC28\uC2DC\uB97C \uC644\uB8CC\uD588\uC2B5\uB2C8\uB2E4!"), React.createElement("button", {
+    className: "btn btn-outline mt-3",
+    onClick: () => actions.setCursor(cls.id, total)
+  }, React.createElement("i", {
+    className: "fa-solid fa-rotate-left"
+  }), "\uB9C8\uC9C0\uB9C9 \uCC28\uC2DC\uB85C \uB418\uB3CC\uB9AC\uAE30")));
+}
+function BoardModal({
+  cls,
+  data,
+  actions,
+  onClose
+}) {
+  const seq = seqForClass(data, cls.id);
+  const cur = getCursor(data, cls.id);
+  const [idx, setIdx] = useState(Math.min(cur - 1, seq.length - 1));
+  useEffect(() => {
+    const h = e => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowRight') setIdx(i => Math.min(seq.length - 1, i + 1));
+      if (e.key === 'ArrowLeft') setIdx(i => Math.max(0, i - 1));
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [seq.length, onClose]);
+  const l = seq[idx];
+  if (!l) return null;
+  const isCurrent = idx === cur - 1;
+  const H = {
+    fontSize: 'clamp(2rem, 4.4vw, 6.5rem)'
+  };
+  const T = {
+    fontSize: 'clamp(1rem, 1.5vw, 2.2rem)'
+  };
+  const B = {
+    fontSize: 'clamp(1.3rem, 2.1vw, 3.4rem)'
+  };
+  const Section = ({
+    icon,
+    title,
+    color,
+    children,
+    className = ''
+  }) => React.createElement("div", {
+    className: `rounded-3xl bg-white/5 border border-white/10 p-[clamp(1rem,1.6vw,2.5rem)] ${className}`
+  }, React.createElement("div", {
+    className: `font-black ${color} mb-2`,
+    style: T
+  }, React.createElement("i", {
+    className: `fa-solid ${icon} mr-2`
+  }), title), React.createElement("div", {
+    className: "font-bold leading-snug whitespace-pre-line",
+    style: B
+  }, children || '—'));
+  return React.createElement("div", {
+    className: "fixed inset-0 z-[55] bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 text-white flex flex-col anim-fade"
+  }, React.createElement("div", {
+    className: "flex items-center gap-3 px-[clamp(1rem,2vw,3rem)] py-3"
+  }, React.createElement("span", {
+    className: "rounded-2xl bg-emerald-500 px-4 py-2 font-black",
+    style: T
+  }, cls.displayName), React.createElement("span", {
+    className: "font-black text-white/70",
+    style: T
+  }, idx + 1, "\uCC28\uC2DC / ", seq.length, " \xB7 ", l.unit), !isCurrent && React.createElement("span", {
+    className: "chip bg-amber-400 text-amber-950"
+  }, idx < cur - 1 ? '지난 차시 보기' : '미리 보기'), React.createElement("div", {
+    className: "ml-auto flex gap-2"
+  }, React.createElement("button", {
+    className: "w-14 h-14 rounded-2xl bg-white/10 hover:bg-white/20 text-2xl disabled:opacity-30",
+    disabled: idx === 0,
+    onClick: () => setIdx(idx - 1),
+    "aria-label": "\uC774\uC804 \uCC28\uC2DC"
+  }, React.createElement("i", {
+    className: "fa-solid fa-chevron-left"
+  })), React.createElement("button", {
+    className: "w-14 h-14 rounded-2xl bg-white/10 hover:bg-white/20 text-2xl disabled:opacity-30",
+    disabled: idx >= seq.length - 1,
+    onClick: () => setIdx(idx + 1),
+    "aria-label": "\uB2E4\uC74C \uCC28\uC2DC"
+  }, React.createElement("i", {
+    className: "fa-solid fa-chevron-right"
+  })), React.createElement("button", {
+    className: "w-14 h-14 rounded-2xl bg-white/10 hover:bg-white/20 text-2xl",
+    onClick: onClose,
+    "aria-label": "\uB2EB\uAE30"
+  }, React.createElement("i", {
+    className: "fa-solid fa-xmark"
+  })))), React.createElement("div", {
+    className: "flex-1 overflow-y-auto px-[clamp(1rem,2vw,3rem)] pb-4"
+  }, React.createElement("h1", {
+    className: "font-black leading-tight tracking-tight mb-[clamp(1rem,1.5vw,2rem)]",
+    style: H
+  }, l.topic), React.createElement("div", {
+    className: "grid lg:grid-cols-2 gap-[clamp(0.75rem,1.2vw,2rem)]"
+  }, React.createElement(Section, {
+    icon: "fa-bullseye",
+    title: "\uD559\uC2B5 \uBAA9\uD45C",
+    color: "text-rose-300",
+    className: "lg:col-span-2"
+  }, l.objective), React.createElement(Section, {
+    icon: "fa-person-running",
+    title: "\uD575\uC2EC \uD65C\uB3D9",
+    color: "text-sky-300"
+  }, l.mainActivity), React.createElement("div", {
+    className: "grid gap-[clamp(0.75rem,1.2vw,2rem)]"
+  }, React.createElement(Section, {
+    icon: "fa-gamepad",
+    title: "\uAC8C\uC784 / \uD45C\uD604 \uD65C\uB3D9",
+    color: "text-amber-300"
+  }, l.gameActivity), React.createElement(Section, {
+    icon: "fa-box-open",
+    title: "\uC900\uBE44\uBB3C",
+    color: "text-emerald-300"
+  }, l.materials), React.createElement(Section, {
+    icon: "fa-clipboard-check",
+    title: "\uD3C9\uAC00 \uAE30\uC900",
+    color: "text-violet-300"
+  }, l.assessment)))), React.createElement("div", {
+    className: "px-[clamp(1rem,2vw,3rem)] py-3 border-t border-white/10 flex justify-end gap-3"
+  }, isCurrent ? React.createElement("button", {
+    className: "btn btn-primary text-2xl min-h-[72px] px-10 rounded-2xl",
+    onClick: () => {
+      actions.complete(cls.id);
+      onClose();
+    }
+  }, React.createElement("i", {
+    className: "fa-solid fa-check-double"
+  }), "\uC218\uC5C5 \uC644\uB8CC") : React.createElement("button", {
+    className: "btn bg-white/10 text-white hover:bg-white/20 min-h-[64px] px-8 text-xl",
+    onClick: () => setIdx(cur - 1)
+  }, "\uC774\uBC88 \uCC28\uC2DC\uB85C \uB3CC\uC544\uAC00\uAE30")));
+}
+function OrderModal({
+  classId,
+  data,
+  update,
+  notify,
+  onClose
+}) {
+  const cls = data.classes.find(c => c.id === classId);
+  const curr = getCurriculumForClass(data, classId);
+  const seq0 = getSequence(data, classId, curr);
+  const cur = getCursor(data, classId);
+  const [ids, setIds] = useState(seq0.map(l => l.id));
+  const [applyAll, setApplyAll] = useState(false);
+  if (!cls || !curr) return null;
+  const map = new Map(curr.lessons.map(l => [l.id, l]));
+  const items = ids.map(id => map.get(id)).filter(Boolean);
+  const lockedCount = cur - 1;
+  const isLocked = i => i < lockedCount;
+  const siblings = sortClasses(data.classes.filter(c => c.gradeId === cls.gradeId && c.id !== cls.id));
+  const baseIds = curr.lessons.map(l => l.id);
+  const changed = ids.join() !== seq0.map(l => l.id).join();
+  const restoreBase = () => {
+    const done = ids.slice(0, lockedCount);
+    const ds = new Set(done);
+    setIds([...done, ...baseIds.filter(id => !ds.has(id))]);
+  };
+  const save = () => {
+    update(d => {
+      const setOrder = (cid, order) => {
+        if (order.join() === baseIds.join()) delete d.classLessonOrders[cid];else d.classLessonOrders[cid] = order;
+      };
+      setOrder(classId, ids);
+      if (applyAll) {
+        siblings.forEach(s => {
+          const sSeq = seqForClass(d, s.id).map(l => l.id);
+          const sCur = getCursor(d, s.id);
+          const done = sSeq.slice(0, sCur - 1);
+          const ds = new Set(done);
+          setOrder(s.id, [...done, ...ids.filter(id => !ds.has(id))]);
+        });
+      }
+    });
+    notify(`${cls.displayName} 차시 순서를 저장했습니다${applyAll ? ` (같은 학년 ${siblings.length}개 반에도 적용)` : ''}.`);
+    onClose();
+  };
+  return React.createElement(Modal, {
+    title: `${cls.displayName} 차시 진행 순서`,
+    icon: "fa-arrow-down-short-wide",
+    size: "lg",
+    onClose: onClose,
+    footer: React.createElement(React.Fragment, null, React.createElement("button", {
+      className: "btn btn-soft mr-auto",
+      onClick: restoreBase
+    }, React.createElement("i", {
+      className: "fa-solid fa-rotate-left"
+    }), "\uAD50\uC721\uACFC\uC815 \uC21C\uC11C\uB85C"), React.createElement("button", {
+      className: "btn btn-outline",
+      onClick: onClose
+    }, "\uCDE8\uC18C"), React.createElement("button", {
+      className: "btn btn-primary",
+      onClick: save,
+      disabled: !changed && !applyAll
+    }, React.createElement("i", {
+      className: "fa-solid fa-floppy-disk"
+    }), "\uC21C\uC11C \uC800\uC7A5"))
+  }, React.createElement("div", {
+    className: "rounded-2xl bg-violet-50 border border-violet-200 text-violet-900 p-3 text-sm mb-4 flex gap-2"
+  }, React.createElement("i", {
+    className: "fa-solid fa-hand-pointer mt-0.5"
+  }), React.createElement("div", null, React.createElement("b", null, "\u2630 \uC190\uC7A1\uC774\uB97C \uB04C\uC5B4"), " \uC218\uC5C5 \uC21C\uC11C\uB97C \uBC14\uAFB8\uC138\uC694. \uB9C8\uC6B0\uC2A4\xB7\uD130\uCE58(\uC804\uC790\uCE60\uD310\xB7\uC2A4\uB9C8\uD2B8\uD3F0) \uBAA8\uB450 \uB429\uB2C8\uB2E4. \uC774\uBBF8 \uC644\uB8CC\uD55C ", lockedCount, "\uAC1C \uCC28\uC2DC\uB294 \uC7A0\uACA8 \uC788\uACE0, \uB0A8\uC740 \uCC28\uC2DC\uB9CC \uC7AC\uBC30\uCE58\uB429\uB2C8\uB2E4. ", React.createElement("b", null, "[\uC774\uBC88 \uC2DC\uAC04\uC73C\uB85C]"), "\uB97C \uB204\uB974\uBA74 \uD574\uB2F9 \uCC28\uC2DC\uAC00 \uBC14\uB85C \uC624\uB298 \uC218\uC5C5\uC774 \uB429\uB2C8\uB2E4.")), React.createElement(SortableList, {
+    items: items,
+    isLocked: isLocked,
+    onReorder: newIds => setIds(newIds),
+    renderItem: (l, i, {
+      handleProps,
+      dragging,
+      locked
+    }) => {
+      const isCur = i === lockedCount;
+      return React.createElement("div", {
+        className: `flex items-stretch rounded-2xl border-2 bg-white overflow-hidden ${dragging ? 'border-violet-400' : isCur ? 'border-emerald-400' : 'border-slate-200'} ${locked ? 'opacity-60 bg-slate-50' : ''}`
+      }, React.createElement("button", _extends({}, handleProps, {
+        className: `w-14 shrink-0 flex items-center justify-center border-r border-slate-100 ${locked ? 'text-slate-300' : 'text-slate-400 hover:text-violet-600 hover:bg-violet-50'}`
+      }), React.createElement("i", {
+        className: `fa-solid ${locked ? 'fa-lock' : 'fa-grip-vertical'} text-xl`
+      })), React.createElement("div", {
+        className: `w-16 shrink-0 flex flex-col items-center justify-center ${isCur ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700'}`
+      }, React.createElement("span", {
+        className: "text-xl font-black leading-none"
+      }, i + 1), React.createElement("span", {
+        className: "text-[10px] font-bold opacity-70"
+      }, isCur ? '이번 시간' : locked ? '완료' : '번째')), React.createElement("div", {
+        className: "flex-1 min-w-0 py-2.5 px-3"
+      }, React.createElement("div", {
+        className: "flex items-center gap-1.5 text-xs font-bold"
+      }, React.createElement("span", {
+        className: `rounded-md px-1.5 py-0.5 ${l.lessonNumber !== i + 1 ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-500'}`
+      }, "\uAD50\uC721\uACFC\uC815 ", l.lessonNumber, "\uCC28\uC2DC"), React.createElement("span", {
+        className: "text-sky-700 truncate"
+      }, l.unit)), React.createElement("div", {
+        className: "font-bold truncate mt-0.5"
+      }, l.topic)), !locked && React.createElement("div", {
+        className: "flex items-center pr-1 shrink-0"
+      }, !isCur && React.createElement("button", {
+        className: "hidden sm:inline-flex h-10 px-3 rounded-lg text-sm font-bold text-emerald-700 hover:bg-emerald-50",
+        onClick: () => setIds(moveItem(ids, i, lockedCount))
+      }, "\uC774\uBC88 \uC2DC\uAC04\uC73C\uB85C"), React.createElement("button", {
+        className: "btn-icon",
+        disabled: i <= lockedCount,
+        onClick: () => setIds(moveItem(ids, i, i - 1)),
+        "aria-label": "\uC704\uB85C"
+      }, React.createElement("i", {
+        className: "fa-solid fa-chevron-up"
+      })), React.createElement("button", {
+        className: "btn-icon",
+        disabled: i >= ids.length - 1,
+        onClick: () => setIds(moveItem(ids, i, i + 1)),
+        "aria-label": "\uC544\uB798\uB85C"
+      }, React.createElement("i", {
+        className: "fa-solid fa-chevron-down"
+      }))));
+    }
+  }), siblings.length > 0 && React.createElement("label", {
+    className: "mt-4 flex items-center gap-3 rounded-2xl border-2 border-slate-200 p-3 cursor-pointer min-h-[56px]"
+  }, React.createElement("input", {
+    type: "checkbox",
+    className: "w-6 h-6 accent-emerald-600",
+    checked: applyAll,
+    onChange: e => setApplyAll(e.target.checked)
+  }), React.createElement("span", {
+    className: "font-semibold"
+  }, "\uAC19\uC740 \uD559\uB144 \uB2E4\uB978 \uBC18(", siblings.map(s => s.displayName).join(', '), ")\uC5D0\uB3C4 \uB0A8\uC740 \uCC28\uC2DC \uC21C\uC11C \uC801\uC6A9")));
+}
+function buildTeams(students, teamCount, genderMode) {
+  const pool = shuffle(students).map(s => ({
+    s,
+    score: (Number(s.skillLevel) || 3) + (Math.random() * 0.7 - 0.35)
+  }));
+  pool.sort((a, b) => b.score - a.score);
+  const teams = range(teamCount).map(() => ({
+    members: [],
+    total: 0,
+    M: 0,
+    F: 0
+  }));
+  const cmp = (a, b) => {
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return a[i] - b[i];
+    }
+    return 0;
+  };
+  const assign = (p, keyFn) => {
+    let best = -1,
+      bestKey = null;
+    shuffle(range(teamCount)).forEach(i => {
+      const k = keyFn(teams[i]);
+      if (best < 0 || cmp(k, bestKey) < 0) {
+        best = i;
+        bestKey = k;
+      }
+    });
+    const t = teams[best];
+    t.members.push(p.s);
+    t.total += p.score;
+    t[p.s.gender === 'F' ? 'F' : 'M']++;
+  };
+  if (genderMode === 'mixed') {
+    const males = pool.filter(p => p.s.gender !== 'F');
+    const females = pool.filter(p => p.s.gender === 'F');
+    const groups = males.length >= females.length ? [males, females] : [females, males];
+    groups.forEach(g => g.forEach(p => {
+      const gk = p.s.gender === 'F' ? 'F' : 'M';
+      assign(p, t => [t[gk], t.members.length, t.total]);
+    }));
+  } else {
+    pool.forEach(p => assign(p, t => [t.members.length, t.total]));
+  }
+  const ids = new Set(students.map(s => s.id));
+  const cmap = new Map(students.map(s => [s.id, new Set()]));
+  students.forEach(s => (s.conflicts || []).forEach(c => {
+    if (ids.has(c)) {
+      cmap.get(s.id).add(c);
+      cmap.get(c).add(s.id);
+    }
+  }));
+  const hates = (a, b) => cmap.get(a.id) && cmap.get(a.id).has(b.id);
+  const clashIn = (team, s, except) => team.members.some(m => m.id !== s.id && m.id !== (except && except.id) && hates(s, m));
+  let unresolved = 0;
+  for (let iter = 0; iter < 80; iter++) {
+    let found = null;
+    teams.forEach((t, ti) => {
+      if (found) return;
+      for (const a of t.members) {
+        const b = t.members.find(m => m.id !== a.id && hates(a, m));
+        if (b) {
+          found = {
+            ti,
+            a,
+            b
+          };
+          return;
+        }
+      }
+    });
+    if (!found) {
+      unresolved = 0;
+      break;
+    }
+    const {
+      ti,
+      a,
+      b
+    } = found;
+    let best = null;
+    [b, a].forEach(mover => {
+      if (best) return;
+      teams.forEach((t, tj) => {
+        if (tj === ti) return;
+        t.members.forEach(c => {
+          if (clashIn(teams[ti], c, mover)) return;
+          if (clashIn(t, mover, c)) return;
+          const score = Math.abs((mover.skillLevel || 3) - (c.skillLevel || 3)) + (mover.gender !== c.gender ? 3 : 0) + Math.random() * 0.2;
+          if (!best || score < best.score) best = {
+            score,
+            mover,
+            c,
+            tj
+          };
+        });
+      });
+    });
+    if (!best) {
+      unresolved++;
+      break;
+    }
+    const A = teams[ti].members,
+      Bm = teams[best.tj].members;
+    A[A.indexOf(best.mover)] = best.c;
+    Bm[Bm.indexOf(best.c)] = best.mover;
+    if (iter === 79) unresolved++;
+  }
+  return {
+    teams: teams.map(t => t.members.map(m => m.id)),
+    unresolved
+  };
+}
+function TeamView({
+  data,
+  update,
+  grade,
+  classes,
+  notify
+}) {
+  const [classId, setClassId] = useState(null);
+  const [teamCount, setTeamCount] = useState(2);
+  const [genderMode, setGenderMode] = useState('mixed');
+  const [rosterOpen, setRosterOpen] = useState(false);
+  const [big, setBig] = useState(false);
+  const fileRef = useRef(null);
+  const cls = classes.find(c => c.id === classId) || classes[0];
+  if (!grade || !cls) return React.createElement(Empty, {
+    icon: "fa-people-group",
+    title: "\uD559\uAE09\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    desc: "\uC124\uC815\uC5D0\uC11C \uD559\uB144\uACFC \uBC18\uC744 \uBA3C\uC800 \uCD94\uAC00\uD558\uC138\uC694."
+  });
+  const today = todayStr();
+  const students = data.students.filter(s => s.classId === cls.id).sort((a, b) => a.studentNumber - b.studentNumber);
+  const att = data.attendance[cls.id];
+  const absent = new Set(att && att.date === today ? att.absent : []);
+  const present = students.filter(s => !absent.has(s.id));
+  const result = data.teamResults[cls.id];
+  const smap = new Map(students.map(s => [s.id, s]));
+  const toggleAbsent = id => update(d => {
+    const a = d.attendance[cls.id];
+    const set = new Set(a && a.date === today ? a.absent : []);
+    set.has(id) ? set.delete(id) : set.add(id);
+    d.attendance[cls.id] = {
+      date: today,
+      absent: [...set]
+    };
+  });
+  const resetAbsent = () => update(d => {
+    d.attendance[cls.id] = {
+      date: today,
+      absent: []
+    };
+  });
+  const generate = () => {
+    if (present.length < teamCount) {
+      notify('출석 학생 수가 팀 수보다 적습니다.', null, 'error');
+      return;
+    }
+    const {
+      teams,
+      unresolved
+    } = buildTeams(present, teamCount, genderMode);
+    update(d => {
+      d.teamResults[cls.id] = {
+        teams,
+        teamCount,
+        genderMode,
+        createdAt: Date.now(),
+        absent: [...absent]
+      };
+    });
+    notify(unresolved ? '팀을 편성했지만 일부 기피 관계를 분리하지 못했습니다.' : `${teamCount}개 팀 편성 완료!`, null, unresolved ? 'info' : 'success');
+  };
+  const downloadTemplate = () => {
+    const wb = XLSX.utils.book_new();
+    classes.forEach(c => {
+      const st = data.students.filter(s => s.classId === c.id).sort((a, b) => a.studentNumber - b.studentNumber);
+      const byId = new Map(st.map(s => [s.id, s]));
+      const rows = [['번호', '이름', '성별(남/여)', '실력(1~5)', '기피번호(쉼표 구분)']];
+      if (st.length) st.forEach(s => rows.push([s.studentNumber, s.name, s.gender === 'F' ? '여' : '남', s.skillLevel, (s.conflicts || []).map(id => byId.get(id) && byId.get(id).studentNumber).filter(Boolean).join(',')]));else rows.push([1, '홍길동', '남', 3, ''], [2, '김하나', '여', 4, '1']);
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{
+        wch: 6
+      }, {
+        wch: 12
+      }, {
+        wch: 12
+      }, {
+        wch: 10
+      }, {
+        wch: 22
+      }];
+      XLSX.utils.book_append_sheet(wb, ws, `${c.classNumber}반`);
+    });
+    const y = data.schoolYears.find(x => x.id === grade.schoolYearId);
+    saveWorkbook(wb, `${y ? y.year : ''}_${grade.displayName}_학생명단.xlsx`);
+  };
+  const importRoster = async file => {
+    try {
+      const wb = XLSX.read(await file.arrayBuffer(), {
+        type: 'array'
+      });
+      const parsed = [];
+      wb.SheetNames.forEach(sn => {
+        const m = sn.match(/(\d+)\s*반/) || sn.match(/(\d+)\s*$/) || sn.match(/(\d+)/);
+        if (!m) return;
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {
+          header: 1,
+          defval: ''
+        });
+        const hi = rows.findIndex(r => r.some(c => /이름|성명/.test(String(c))));
+        if (hi < 0) return;
+        const h = rows[hi].map(c => norm(c));
+        const col = (re, not) => h.findIndex(x => re.test(x) && !(not && not.test(x)));
+        const ci = {
+          num: col(/번호|^no$/, /기피|분리|갈등/),
+          name: col(/이름|성명/),
+          gender: col(/성별|^성$/),
+          skill: col(/실력|별점|수준|기능|점수/),
+          conf: col(/기피|분리|갈등|불화/)
+        };
+        const list = rows.slice(hi + 1).filter(r => String(r[ci.name] ?? '').trim()).map((r, i) => {
+          const g = String(ci.gender >= 0 ? r[ci.gender] : '').trim().toUpperCase();
+          const sk = parseInt(ci.skill >= 0 ? r[ci.skill] : 3, 10);
+          return {
+            num: parseInt(ci.num >= 0 ? r[ci.num] : i + 1, 10) || i + 1,
+            name: String(r[ci.name]).trim(),
+            gender: /^(여|F|여자|W)/.test(g) ? 'F' : 'M',
+            skill: Math.min(5, Math.max(1, isNaN(sk) ? 3 : sk)),
+            conf: String(ci.conf >= 0 ? r[ci.conf] : '').split(/[,\s\/·]+/).map(x => parseInt(x, 10)).filter(x => !isNaN(x))
+          };
+        });
+        parsed.push({
+          classNumber: parseInt(m[1], 10),
+          list
+        });
+      });
+      if (!parsed.length) {
+        notify('반 이름(예: 1반)이 있는 시트를 찾지 못했습니다.', null, 'error');
+        return;
+      }
+      const total = parsed.reduce((a, p) => a + p.list.length, 0);
+      if (!(await ask(`${grade.displayName} ${parsed.length}개 반, 학생 ${total}명을 등록합니다.\n해당 반의 기존 명단은 대체됩니다. 계속할까요?`))) return;
+      update(d => {
+        parsed.forEach(p => {
+          let c = d.classes.find(x => x.gradeId === grade.id && x.classNumber === p.classNumber);
+          if (!c) {
+            c = {
+              id: uid('c'),
+              gradeId: grade.id,
+              classNumber: p.classNumber,
+              displayName: `${grade.gradeNumber}-${p.classNumber}`,
+              active: true
+            };
+            d.classes.push(c);
+          }
+          d.students = d.students.filter(s => s.classId !== c.id);
+          const made = p.list.map(s => ({
+            id: uid('st'),
+            classId: c.id,
+            studentNumber: s.num,
+            name: s.name,
+            gender: s.gender,
+            skillLevel: s.skill,
+            conflicts: [],
+            _conf: s.conf
+          }));
+          const byNum = new Map(made.map(s => [s.studentNumber, s.id]));
+          made.forEach(s => {
+            s.conflicts = s._conf.map(n => byNum.get(n)).filter(x => x && x !== s.id);
+            delete s._conf;
+          });
+          d.students.push(...made);
+          delete d.teamResults[c.id];
+        });
+      });
+      notify(`학생 ${total}명을 등록했습니다.`);
+    } catch (e) {
+      notify('엑셀을 읽지 못했습니다: ' + e.message, null, 'error');
+    }
+  };
+  const mCount = present.filter(s => s.gender !== 'F').length;
+  const resultTeams = result ? result.teams.map(t => t.map(id => smap.get(id)).filter(Boolean)) : [];
+  const resultAbsent = result ? (result.absent || []).map(id => smap.get(id)).filter(Boolean) : [];
+  const TeamCards = ({
+    large
+  }) => React.createElement("div", {
+    className: `grid gap-3 ${resultTeams.length <= 2 ? 'sm:grid-cols-2' : resultTeams.length === 3 ? 'sm:grid-cols-3' : resultTeams.length === 4 ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-3'}`
+  }, resultTeams.map((members, ti) => {
+    const T = TEAMS[ti];
+    const m = members.filter(s => s.gender !== 'F').length;
+    const avg = members.length ? members.reduce((a, s) => a + (Number(s.skillLevel) || 0), 0) / members.length : 0;
+    return React.createElement("div", {
+      key: ti,
+      className: `rounded-3xl border-2 ${T.border} ${T.soft} overflow-hidden`
+    }, React.createElement("div", {
+      className: `${T.bg} text-white px-4 py-3 flex items-center gap-2`
+    }, React.createElement("i", {
+      className: `fa-solid ${T.icon} ${large ? 'text-3xl' : 'text-xl'}`
+    }), React.createElement("span", {
+      className: `font-black ${large ? 'text-4xl' : 'text-2xl'}`
+    }, T.name), React.createElement("span", {
+      className: "ml-auto text-sm font-bold bg-white/20 rounded-full px-2.5 py-1"
+    }, members.length, "\uBA85 \xB7 \uB0A8", m, " \uC5EC", members.length - m, " \xB7 \u2605", avg.toFixed(1))), React.createElement("div", {
+      className: `p-3 grid ${large ? 'grid-cols-2 gap-2' : 'grid-cols-2 gap-1.5'}`
+    }, [...members].sort((a, b) => a.studentNumber - b.studentNumber).map(s => React.createElement("div", {
+      key: s.id,
+      className: `rounded-xl bg-white flex items-center gap-2 px-3 ${large ? 'py-3 text-2xl' : 'py-2'} font-bold`
+    }, React.createElement("span", {
+      className: `w-2.5 h-2.5 rounded-full shrink-0 ${s.gender === 'F' ? 'bg-pink-400' : 'bg-sky-500'}`
+    }), React.createElement("span", {
+      className: "truncate"
+    }, s.name), !large && React.createElement("span", {
+      className: "ml-auto text-[10px] text-amber-500 shrink-0"
+    }, '★'.repeat(s.skillLevel || 0))))));
+  }));
+  return React.createElement("div", {
+    className: "space-y-4"
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-center gap-2"
+  }, React.createElement("h2", {
+    className: "text-2xl sm:text-3xl font-black mr-auto"
+  }, "\uD300 \uAD6C\uC131 ", React.createElement("span", {
+    className: "text-emerald-600"
+  }, "\xB7 ", cls.displayName)), React.createElement("button", {
+    className: "btn btn-outline",
+    onClick: () => setRosterOpen(true)
+  }, React.createElement("i", {
+    className: "fa-solid fa-address-book"
+  }), "\uBA85\uBD80 \uAD00\uB9AC"), React.createElement("button", {
+    className: "btn btn-outline",
+    onClick: downloadTemplate
+  }, React.createElement("i", {
+    className: "fa-solid fa-file-arrow-down"
+  }), "\uBA85\uB2E8 \uC591\uC2DD \uB0B4\uB824\uBC1B\uAE30"), React.createElement("button", {
+    className: "btn btn-outline",
+    onClick: () => fileRef.current && fileRef.current.click()
+  }, React.createElement("i", {
+    className: "fa-solid fa-file-excel text-emerald-600"
+  }), "\uBA85\uB2E8 Excel \uB4F1\uB85D"), React.createElement("input", {
+    ref: fileRef,
+    type: "file",
+    accept: ".xlsx,.xls,.csv",
+    className: "hidden",
+    onChange: e => {
+      const f = e.target.files[0];
+      if (f) importRoster(f);
+      e.target.value = '';
+    }
+  })), React.createElement("div", {
+    className: "flex gap-2 overflow-x-auto no-scrollbar"
+  }, classes.map(c => React.createElement("button", {
+    key: c.id,
+    onClick: () => setClassId(c.id),
+    className: `min-h-[48px] px-5 rounded-xl font-black shrink-0 ${c.id === cls.id ? 'bg-emerald-600 text-white' : 'bg-white border-2 border-slate-200 text-slate-600'}`
+  }, c.displayName))), React.createElement("div", {
+    className: "card p-4 sm:p-5"
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-center gap-2 mb-3"
+  }, React.createElement("h3", {
+    className: "text-lg font-black mr-auto"
+  }, React.createElement("i", {
+    className: "fa-solid fa-user-check text-emerald-600 mr-2"
+  }), "\uCD9C\uC11D \uCCB4\uD06C ", React.createElement("span", {
+    className: "text-sm text-slate-500 font-bold ml-1"
+  }, "\uC774\uB984\uC744 \uD130\uCE58\uD558\uBA74 \uACB0\uC11D \uCC98\uB9AC")), React.createElement("span", {
+    className: "chip bg-emerald-50 text-emerald-700"
+  }, "\uCD9C\uC11D ", present.length, " / ", students.length, "\uBA85 (\uB0A8 ", mCount, " \xB7 \uC5EC ", present.length - mCount, ")"), absent.size > 0 && React.createElement("button", {
+    className: "btn btn-soft min-h-[44px]",
+    onClick: resetAbsent
+  }, React.createElement("i", {
+    className: "fa-solid fa-rotate-left"
+  }), "\uC804\uC6D0 \uCD9C\uC11D(\uCD08\uAE30\uD654)")), students.length === 0 ? React.createElement("p", {
+    className: "text-slate-500 py-6 text-center"
+  }, "\uD559\uC0DD \uBA85\uB2E8\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. [\uBA85\uBD80 \uAD00\uB9AC] \uB610\uB294 [\uBA85\uB2E8 Excel \uB4F1\uB85D]\uC73C\uB85C \uCD94\uAC00\uD558\uC138\uC694.") : React.createElement("div", {
+    className: "grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 2xl:grid-cols-11 gap-2"
+  }, students.map(s => {
+    const ab = absent.has(s.id);
+    return React.createElement("button", {
+      key: s.id,
+      onClick: () => toggleAbsent(s.id),
+      className: `relative min-h-[56px] rounded-2xl border-2 px-2 py-1.5 text-left transition active:scale-95 ${ab ? 'border-rose-200 bg-rose-50' : s.gender === 'F' ? 'border-pink-200 bg-pink-50/50 hover:border-pink-300' : 'border-sky-200 bg-sky-50/50 hover:border-sky-300'}`
+    }, React.createElement("div", {
+      className: "text-[10px] font-bold text-slate-400"
+    }, s.studentNumber, "\uBC88 ", ab && React.createElement("span", {
+      className: "text-rose-600"
+    }, "[\uACB0\uC11D]")), React.createElement("div", {
+      className: `font-black truncate ${ab ? 'line-through text-slate-400' : ''}`
+    }, s.name));
+  }))), React.createElement("div", {
+    className: "card p-4 sm:p-5 flex flex-wrap items-end gap-4"
+  }, React.createElement("div", null, React.createElement("div", {
+    className: "label"
+  }, "\uD300 \uC218"), React.createElement("div", {
+    className: "flex gap-1.5"
+  }, [2, 3, 4, 5, 6].map(n => React.createElement("button", {
+    key: n,
+    onClick: () => setTeamCount(n),
+    className: `w-14 h-14 rounded-2xl font-black text-xl ${teamCount === n ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`
+  }, n)))), React.createElement("div", null, React.createElement("div", {
+    className: "label"
+  }, "\uC131\uBCC4 \uBAA8\uB4DC"), React.createElement("div", {
+    className: "flex rounded-2xl bg-slate-100 p-1"
+  }, [['mixed', '남녀 혼합(성비 균등)', 'fa-venus-mars'], ['random', '무작위 균등', 'fa-shuffle']].map(([k, l, ic]) => React.createElement("button", {
+    key: k,
+    onClick: () => setGenderMode(k),
+    className: `h-12 px-4 rounded-xl font-bold ${genderMode === k ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`
+  }, React.createElement("i", {
+    className: `fa-solid ${ic} mr-1.5`
+  }), l)))), React.createElement("div", {
+    className: "flex gap-2 ml-auto"
+  }, result && React.createElement("button", {
+    className: "btn btn-outline",
+    onClick: () => setBig(true)
+  }, React.createElement("i", {
+    className: "fa-solid fa-expand"
+  }), "\uD06C\uAC8C \uBCF4\uAE30"), React.createElement("button", {
+    className: "btn btn-primary text-lg min-h-[56px] px-6",
+    onClick: generate
+  }, React.createElement("i", {
+    className: `fa-solid ${result ? 'fa-dice' : 'fa-wand-magic-sparkles'}`
+  }), result ? '다시 뽑기' : '팀 편성하기'))), result && resultTeams.length > 0 && React.createElement("div", {
+    className: "space-y-3"
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-center gap-2"
+  }, React.createElement("h3", {
+    className: "text-lg font-black"
+  }, "\uD3B8\uC131 \uACB0\uACFC"), React.createElement("span", {
+    className: "text-sm text-slate-400 font-semibold"
+  }, new Date(result.createdAt).toLocaleString('ko-KR'), " \xB7 ", result.genderMode === 'mixed' ? '남녀 혼합' : '무작위 균등'), resultAbsent.length > 0 && React.createElement("span", {
+    className: "chip bg-rose-50 text-rose-700 border border-rose-200"
+  }, React.createElement("i", {
+    className: "fa-solid fa-user-slash"
+  }), "\uACB0\uC11D \uC81C\uC678: ", resultAbsent.map(s => s.name).join(', '))), React.createElement(TeamCards, null)), big && React.createElement("div", {
+    className: "fixed inset-0 z-[55] bg-slate-900 p-[clamp(1rem,2vw,3rem)] overflow-y-auto anim-fade"
+  }, React.createElement("div", {
+    className: "flex items-center mb-4 text-white"
+  }, React.createElement("h2", {
+    className: "text-4xl font-black"
+  }, cls.displayName, " \uD300 \uD3B8\uC131"), resultAbsent.length > 0 && React.createElement("span", {
+    className: "ml-4 chip bg-rose-500/20 text-rose-200 text-lg"
+  }, "\uACB0\uC11D ", resultAbsent.length, "\uBA85 \uC81C\uC678"), React.createElement("button", {
+    className: "ml-auto btn bg-white/10 text-white hover:bg-white/20 mr-2",
+    onClick: generate
+  }, React.createElement("i", {
+    className: "fa-solid fa-dice"
+  }), "\uB2E4\uC2DC \uBF51\uAE30"), React.createElement("button", {
+    className: "w-14 h-14 rounded-2xl bg-white/10 text-white text-2xl",
+    onClick: () => setBig(false),
+    "aria-label": "\uB2EB\uAE30"
+  }, React.createElement("i", {
+    className: "fa-solid fa-xmark"
+  }))), React.createElement(TeamCards, {
+    large: true
+  })), rosterOpen && React.createElement(RosterModal, {
+    cls: cls,
+    data: data,
+    update: update,
+    onClose: () => setRosterOpen(false)
+  }));
+}
+function RosterModal({
+  cls,
+  data,
+  update,
+  onClose
+}) {
+  const students = data.students.filter(s => s.classId === cls.id).sort((a, b) => a.studentNumber - b.studentNumber);
+  const [newName, setNewName] = useState('');
+  const [newGender, setNewGender] = useState('M');
+  const [openConf, setOpenConf] = useState(null);
+  const patch = (id, p) => update(d => {
+    const s = d.students.find(x => x.id === id);
+    if (s) Object.assign(s, p);
+  });
+  const remove = async s => {
+    if (!(await ask(`${s.name} 학생을 명단에서 삭제(전출)할까요?`))) return;
+    update(d => {
+      d.students = d.students.filter(x => x.id !== s.id);
+      d.students.forEach(x => {
+        x.conflicts = (x.conflicts || []).filter(c => c !== s.id);
+      });
+    });
+  };
+  const add = () => {
+    const name = newName.trim();
+    if (!name) return;
+    update(d => {
+      const max = d.students.filter(s => s.classId === cls.id).reduce((m, s) => Math.max(m, s.studentNumber), 0);
+      d.students.push({
+        id: uid('st'),
+        classId: cls.id,
+        studentNumber: max + 1,
+        name,
+        gender: newGender,
+        skillLevel: 3,
+        conflicts: []
+      });
+    });
+    setNewName('');
+  };
+  const toggleConflict = (a, bId) => update(d => {
+    const A = d.students.find(x => x.id === a.id);
+    const B = d.students.find(x => x.id === bId);
+    if (!A || !B) return;
+    const has = (A.conflicts || []).includes(bId);
+    A.conflicts = has ? A.conflicts.filter(x => x !== bId) : [...(A.conflicts || []), bId];
+    B.conflicts = has ? (B.conflicts || []).filter(x => x !== A.id) : [...new Set([...(B.conflicts || []), A.id])];
+  });
+  const nameOf = new Map(students.map(s => [s.id, s.name]));
+  return React.createElement(Modal, {
+    title: `${cls.displayName} 학생 명부 (${students.length}명)`,
+    icon: "fa-address-book",
+    size: "lg",
+    onClose: onClose,
+    footer: React.createElement("button", {
+      className: "btn btn-primary",
+      onClick: onClose
+    }, "\uC644\uB8CC")
+  }, React.createElement("div", {
+    className: "space-y-2"
+  }, students.map(s => React.createElement("div", {
+    key: s.id,
+    className: "rounded-2xl border-2 border-slate-200 p-2"
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-center gap-2"
+  }, React.createElement(InlineInput, {
+    value: s.studentNumber,
+    type: "number",
+    className: "!w-16 text-center font-bold",
+    onCommit: v => patch(s.id, {
+      studentNumber: parseInt(v, 10) || s.studentNumber
+    }),
+    "aria-label": "\uBC88\uD638"
+  }), React.createElement(InlineInput, {
+    value: s.name,
+    className: "!w-32 font-bold",
+    onCommit: v => v.trim() && patch(s.id, {
+      name: v.trim()
+    }),
+    "aria-label": "\uC774\uB984"
+  }), React.createElement("button", {
+    onClick: () => patch(s.id, {
+      gender: s.gender === 'F' ? 'M' : 'F'
+    }),
+    className: `h-12 w-14 rounded-xl font-black ${s.gender === 'F' ? 'bg-pink-100 text-pink-700' : 'bg-sky-100 text-sky-700'}`
+  }, s.gender === 'F' ? '여' : '남'), React.createElement(Stars, {
+    value: s.skillLevel,
+    onChange: n => patch(s.id, {
+      skillLevel: n
+    }),
+    size: "text-xl"
+  }), React.createElement("button", {
+    onClick: () => setOpenConf(openConf === s.id ? null : s.id),
+    className: `h-12 px-3 rounded-xl font-bold text-sm ${(s.conflicts || []).length ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'}`
+  }, React.createElement("i", {
+    className: "fa-solid fa-user-shield mr-1"
+  }), "\uAE30\uD53C ", (s.conflicts || []).length ? (s.conflicts || []).map(c => nameOf.get(c)).filter(Boolean).join(', ') : '없음'), React.createElement("button", {
+    className: "btn-icon ml-auto text-rose-500 hover:bg-rose-50",
+    onClick: () => remove(s),
+    "aria-label": "\uC0AD\uC81C"
+  }, React.createElement("i", {
+    className: "fa-solid fa-user-minus"
+  }))), openConf === s.id && React.createElement("div", {
+    className: "mt-2 rounded-xl bg-amber-50 p-3"
+  }, React.createElement("div", {
+    className: "text-sm font-bold text-amber-800 mb-2"
+  }, "\uAC19\uC740 \uD300\uC5D0 \uBC30\uC815\uD558\uC9C0 \uC54A\uC744 \uCE5C\uAD6C (\uC5EC\uB7EC \uBA85 \uC120\uD0DD \uAC00\uB2A5)"), React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
+  }, students.filter(o => o.id !== s.id).map(o => {
+    const on = (s.conflicts || []).includes(o.id);
+    return React.createElement("button", {
+      key: o.id,
+      onClick: () => toggleConflict(s, o.id),
+      className: `h-10 px-3 rounded-lg text-sm font-bold border-2 ${on ? 'bg-amber-500 border-amber-500 text-white' : 'bg-white border-amber-200 text-slate-600'}`
+    }, on && React.createElement("i", {
+      className: "fa-solid fa-check mr-1"
+    }), o.studentNumber, ". ", o.name);
+  })))))), React.createElement("form", {
+    className: "mt-4 flex flex-wrap gap-2 rounded-2xl bg-emerald-50 p-3",
+    onSubmit: e => {
+      e.preventDefault();
+      add();
+    }
+  }, React.createElement("input", {
+    className: "input !w-auto flex-1 min-w-[140px]",
+    placeholder: "\uC804\uC785\uC0DD \uC774\uB984",
+    value: newName,
+    onChange: e => setNewName(e.target.value)
+  }), React.createElement("button", {
+    type: "button",
+    onClick: () => setNewGender(newGender === 'M' ? 'F' : 'M'),
+    className: `h-12 w-14 rounded-xl font-black ${newGender === 'F' ? 'bg-pink-100 text-pink-700' : 'bg-sky-100 text-sky-700'}`
+  }, newGender === 'F' ? '여' : '남'), React.createElement("button", {
+    className: "btn btn-primary"
+  }, React.createElement("i", {
+    className: "fa-solid fa-user-plus"
+  }), "\uC804\uC785\uC0DD \uCD94\uAC00")));
+}
+function ProgressView({
+  data,
+  grade,
+  classes,
+  curr,
+  actions,
+  onOpenOrder
+}) {
+  if (!grade || !curr) return React.createElement(Empty, {
+    icon: "fa-table-cells",
+    title: "\uC9C4\uB3C4\uD45C\uB97C \uD45C\uC2DC\uD560 \uD559\uB144/\uAD50\uC721\uACFC\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4"
+  });
+  if (!classes.length) return React.createElement(Empty, {
+    icon: "fa-school",
+    title: "\uD559\uAE09\uC774 \uC5C6\uC2B5\uB2C8\uB2E4"
+  });
+  const rows = classes.map(c => ({
+    c,
+    seq: seqForClass(data, c.id),
+    cur: getCursor(data, c.id),
+    custom: !!(data.classLessonOrders[c.id] && data.classLessonOrders[c.id].length)
+  }));
+  const maxT = Math.max(...rows.map(r => r.seq.length), 0);
+  return React.createElement("div", {
+    className: "space-y-4"
+  }, React.createElement("h2", {
+    className: "text-2xl sm:text-3xl font-black"
+  }, "\uC804\uCCB4 \uC9C4\uB3C4\uD45C ", React.createElement("span", {
+    className: "text-emerald-600"
+  }, "\xB7 ", grade.displayName)), React.createElement("div", {
+    className: "grid gap-3 md:grid-cols-2 2xl:grid-cols-4"
+  }, rows.map(({
+    c,
+    seq,
+    cur,
+    custom
+  }) => {
+    const done = Math.min(cur - 1, seq.length);
+    const pct = seq.length ? Math.round(done / seq.length * 100) : 0;
+    return React.createElement("div", {
+      key: c.id,
+      className: "card p-4"
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, React.createElement("span", {
+      className: "text-2xl font-black"
+    }, c.displayName), custom && React.createElement("span", {
+      className: "chip bg-violet-50 text-violet-700 text-xs"
+    }, React.createElement("i", {
+      className: "fa-solid fa-shuffle"
+    }), "\uC21C\uC11C \uBCC0\uACBD\uB428"), React.createElement("span", {
+      className: "ml-auto text-3xl font-black text-emerald-600"
+    }, pct, "%")), React.createElement("div", {
+      className: "h-4 rounded-full bg-slate-100 overflow-hidden mt-2"
+    }, React.createElement("div", {
+      className: "h-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-500",
+      style: {
+        width: `${pct}%`
+      }
+    })), React.createElement("div", {
+      className: "flex items-center justify-between mt-2 text-sm font-bold text-slate-500"
+    }, React.createElement("span", null, "\uC644\uB8CC ", done, " / ", seq.length, "\uCC28\uC2DC"), React.createElement("button", {
+      className: "h-10 px-3 rounded-lg hover:bg-slate-100 text-violet-700",
+      onClick: () => onOpenOrder(c.id)
+    }, React.createElement("i", {
+      className: "fa-solid fa-arrow-down-short-wide mr-1"
+    }), "\uC21C\uC11C \uBCC0\uACBD")));
+  })), React.createElement("div", {
+    className: "card p-4"
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-center gap-3 mb-3 text-sm font-semibold text-slate-500"
+  }, React.createElement("span", {
+    className: "font-black text-slate-800 text-base"
+  }, "\uC9C4\uB3C4 \uB9E4\uD2B8\uB9AD\uC2A4"), React.createElement("span", null, React.createElement("span", {
+    className: "inline-flex w-6 h-6 rounded-md bg-emerald-500 text-white items-center justify-center text-xs mr-1"
+  }, React.createElement("i", {
+    className: "fa-solid fa-check"
+  })), "\uC644\uB8CC (\uD074\uB9AD \uC2DC \uADF8 \uCC28\uC2DC\uB85C \uB418\uB3CC\uB9AC\uAE30)"), React.createElement("span", null, React.createElement("span", {
+    className: "inline-flex w-6 h-6 rounded-md bg-amber-400 text-white items-center justify-center text-xs mr-1"
+  }, React.createElement("i", {
+    className: "fa-solid fa-play"
+  })), "\uC774\uBC88 \uC2DC\uAC04"), React.createElement("span", null, React.createElement("span", {
+    className: "inline-flex w-6 h-6 rounded-md bg-slate-100 text-slate-400 items-center justify-center mr-1"
+  }, "\u2022"), "\uBBF8\uC9C4\uD589 (\uD074\uB9AD \uC2DC \uADF8 \uCC28\uC2DC\uB85C \uC810\uD504)"), React.createElement("span", {
+    className: "text-violet-600"
+  }, React.createElement("span", {
+    className: "text-[10px] font-black mr-1"
+  }, "15"), "= \uC21C\uC11C \uBCC0\uACBD\uB41C \uC6D0\uB798 \uAD50\uC721\uACFC\uC815 \uCC28\uC2DC")), React.createElement("div", {
+    className: "overflow-x-auto pb-2"
+  }, React.createElement("table", {
+    className: "border-separate",
+    style: {
+      borderSpacing: 4
+    }
+  }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {
+    className: "sticky left-0 z-10 bg-white text-left pr-2 text-sm text-slate-400"
+  }, "\uBC18"), range(maxT).map(i => React.createElement("th", {
+    key: i,
+    className: "text-xs font-bold text-slate-400 w-11"
+  }, i + 1)))), React.createElement("tbody", null, rows.map(({
+    c,
+    seq,
+    cur
+  }) => React.createElement("tr", {
+    key: c.id
+  }, React.createElement("th", {
+    className: "sticky left-0 z-10 bg-white text-left pr-3 font-black whitespace-nowrap"
+  }, c.displayName), range(maxT).map(i => {
+    const l = seq[i];
+    if (!l) return React.createElement("td", {
+      key: i
+    });
+    const pos = i + 1;
+    const state = pos < cur ? 'done' : pos === cur ? 'cur' : 'todo';
+    const moved = l.lessonNumber !== pos;
+    const cls = state === 'done' ? 'bg-emerald-500 text-white hover:bg-emerald-600' : state === 'cur' ? 'bg-amber-400 text-white ring-4 ring-amber-200' : 'bg-slate-100 text-slate-400 hover:bg-slate-200';
+    return React.createElement("td", {
+      key: i
+    }, React.createElement("button", {
+      title: `${pos}번째 수업 · 교육과정 ${l.lessonNumber}차시\n${l.topic}`,
+      onClick: () => {
+        if (state !== 'cur') actions.setCursor(c.id, pos, true);
+      },
+      className: `relative w-11 h-11 rounded-lg font-black transition active:scale-90 ${cls}`
+    }, state === 'done' ? React.createElement("i", {
+      className: "fa-solid fa-check"
+    }) : state === 'cur' ? React.createElement("i", {
+      className: "fa-solid fa-play text-sm"
+    }) : '•', moved && React.createElement("span", {
+      className: `absolute bottom-0 right-0.5 text-[9px] font-black ${state === 'todo' ? 'text-violet-500' : 'text-white/90'}`
+    }, l.lessonNumber)));
+  }))))))));
+}
+const LESSON_FIELDS = [{
+  key: 'lessonNumber',
+  label: '차시',
+  aliases: ['차시', '회차', '차시번호', '번호', 'no', '순서', '차']
+}, {
+  key: 'unit',
+  label: '단원',
+  aliases: ['단원', '영역', '대단원', '단원명', '영역명', '중단원', '단원영역']
+}, {
+  key: 'topic',
+  label: '소주제',
+  aliases: ['소주제', '차시명', '주제', '제목', '학습주제', '수업주제', '차시주제', '주제명', '활동명']
+}, {
+  key: 'objective',
+  label: '학습 목표',
+  aliases: ['목표', '학습목표', '성취기준', '수업목표', '차시목표', '성취목표']
+}, {
+  key: 'mainActivity',
+  label: '주요 활동',
+  aliases: ['활동', '내용', '주요활동', '학습활동', '핵심활동', '수업내용', '교수학습활동', '학습내용', '전개', '활동내용', '주요내용']
+}, {
+  key: 'gameActivity',
+  label: '게임/표현 활동',
+  aliases: ['게임', '표현', '게임활동', '표현활동', '게임표현', '게임표현활동', '놀이', '놀이활동', '경기', '게임방법']
+}, {
+  key: 'materials',
+  label: '준비물',
+  aliases: ['준비물', '교구', '자료', '준비', '교구준비물', '학습자료', '교구자료', '준비물교구', '수업자료']
+}, {
+  key: 'assessment',
+  label: '평가',
+  aliases: ['평가', '평가기준', '평가요소', '평가방법', '평가내용', '평가관점']
+}, {
+  key: 'edutech',
+  label: '에듀테크',
+  aliases: ['에듀테크', '디지털', '스마트', '기기', '디지털도구', '에듀테크활용', '디지털기기', '스마트기기', '디지털교과서']
+}];
+const isAscii = s => /^[\x00-\x7f]+$/.test(s);
+function headerScores(h) {
+  const n = norm(h);
+  const out = {};
+  if (!n) return out;
+  LESSON_FIELDS.forEach(f => {
+    let best = 0;
+    f.aliases.forEach(a => {
+      if (n === a) best = Math.max(best, 100 + a.length);else if (a.length >= 2 && !isAscii(a) && n.includes(a)) best = Math.max(best, a.length * 10);
+    });
+    if (best) out[f.key] = best;
+  });
+  return out;
+}
+function mapHeaderRow(row) {
+  const cand = [];
+  row.forEach((h, ci) => {
+    const sc = headerScores(h);
+    Object.entries(sc).forEach(([k, s]) => cand.push({
+      ci,
+      k,
+      s
+    }));
+  });
+  cand.sort((a, b) => b.s - a.s);
+  const mapping = row.map(() => '');
+  const usedK = new Set();
+  const usedC = new Set();
+  cand.forEach(({
+    ci,
+    k
+  }) => {
+    if (usedK.has(k) || usedC.has(ci)) return;
+    mapping[ci] = k;
+    usedK.add(k);
+    usedC.add(ci);
+  });
+  return mapping;
+}
+function autoMap(rows) {
+  let best = {
+    headerIdx: 0,
+    mapping: (rows[0] || []).map(() => ''),
+    count: -1
+  };
+  rows.slice(0, 12).forEach((r, i) => {
+    const m = mapHeaderRow(r);
+    const c = m.filter(Boolean).length;
+    if (c > best.count) best = {
+      headerIdx: i,
+      mapping: m,
+      count: c
+    };
+  });
+  return best;
+}
+function buildLessonsFromRows(rows, headerIdx, mapping) {
+  const out = [];
+  let lastUnit = '';
+  rows.slice(headerIdx + 1).forEach((r, ri) => {
+    const o = {};
+    mapping.forEach((k, ci) => {
+      if (!k) return;
+      const v = String(r[ci] ?? '').trim();
+      if (!v) return;
+      o[k] = o[k] ? `${o[k]}\n${v}` : v;
+    });
+    if (!o.topic && !o.mainActivity && !o.gameActivity) return;
+    if (o.unit) lastUnit = o.unit;else o.unit = lastUnit;
+    const n = parseInt(String(o.lessonNumber || '').replace(/[^\d]/g, ''), 10);
+    o._order = isNaN(n) ? 100000 + ri : n;
+    if (!o.topic) o.topic = (o.gameActivity || o.mainActivity || '').split('\n')[0];
+    out.push(o);
+  });
+  out.sort((a, b) => a._order - b._order);
+  return out.map((o, i) => {
+    const {
+      _order,
+      lessonNumber,
+      ...rest
+    } = o;
+    return {
+      ...rest,
+      lessonNumber: i + 1
+    };
+  });
+}
+const emptyLesson = () => ({
+  unit: '',
+  topic: '',
+  objective: '',
+  mainActivity: '',
+  gameActivity: '',
+  materials: '',
+  assessment: '',
+  edutech: ''
+});
+function downloadCurriculumTemplate(curr) {
+  const head = ['차시', '단원', '소주제', '학습목표', '주요활동', '게임/표현활동', '준비물', '평가', '에듀테크'];
+  const rows = [head];
+  if (curr && curr.lessons.length) curr.lessons.forEach(l => rows.push([l.lessonNumber, l.unit, l.topic, l.objective, l.mainActivity, l.gameActivity, l.materials, l.assessment, l.edutech]));else {
+    rows.push([1, '운동 - 건강한 생활', '바른 자세와 건강', '신체 활동에 필요한 바른 자세를 익힌다.', '1. 바른 자세 체험\n2. 스트레칭 릴레이', '바른 자세 릴레이 게임', '매트, 타이머', '바른 자세를 유지하며 참여하는가?', '동작 피드백 태블릿 앱']);
+    rows.push([2, '운동 - 건강한 생활', '나의 체력 알아보기', '나의 체력 수준을 확인한다.', '1. 체력 요소 알아보기\n2. 순환 측정', '체력 미션 빙고', '콘, 타이머', '자신의 체력을 바르게 측정하는가?', '온라인 타이머']);
+  }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{
+    wch: 6
+  }, {
+    wch: 20
+  }, {
+    wch: 22
+  }, {
+    wch: 36
+  }, {
+    wch: 40
+  }, {
+    wch: 22
+  }, {
+    wch: 22
+  }, {
+    wch: 32
+  }, {
+    wch: 20
+  }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '교육과정');
+  saveWorkbook(wb, curr ? `${curr.title || '교육과정'}.xlsx` : 'PE_Master_교육과정_표준양식.xlsx');
+}
+function CurriculumView({
+  data,
+  update,
+  grade,
+  curr,
+  yearGrades,
+  notify
+}) {
+  const [tab, setTab] = useState('list');
+  const [editing, setEditing] = useState(null);
+  const [metaOpen, setMetaOpen] = useState(false);
+  if (!grade) return React.createElement(Empty, {
+    icon: "fa-book-open",
+    title: "\uB2F4\uB2F9 \uD559\uB144\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    desc: "\uC124\uC815\uC5D0\uC11C \uD559\uB144\uC744 \uCD94\uAC00\uD558\uC138\uC694."
+  });
+  const ensureCurr = () => update(d => {
+    const g = d.grades.find(x => x.id === grade.id);
+    const c = {
+      id: uid('curr'),
+      schoolYearId: g.schoolYearId,
+      gradeId: g.id,
+      semester: '1학기',
+      title: `${g.displayName} 체육 교육과정`,
+      totalLessons: 0,
+      lessons: []
+    };
+    d.curriculums.push(c);
+    g.curriculumId = c.id;
+  });
+  const classesOf = d => d.classes.filter(c => c.gradeId === grade.id);
+  const reorderBase = newIds => {
+    update(d => {
+      const c = d.curriculums.find(x => x.id === curr.id);
+      const cls = classesOf(d);
+      const old = {};
+      cls.forEach(k => {
+        old[k.id] = getSequence(d, k.id, c).map(l => l.id);
+      });
+      const map = new Map(c.lessons.map(l => [l.id, l]));
+      c.lessons = newIds.map((id, i) => ({
+        ...map.get(id),
+        lessonNumber: i + 1
+      }));
+      cls.forEach(k => {
+        if (d.classLessonOrders[k.id] && d.classLessonOrders[k.id].length) return;
+        const cur = getCursor(d, k.id);
+        if (cur <= 1) return;
+        const done = old[k.id].slice(0, cur - 1);
+        const ds = new Set(done);
+        const order = [...done, ...newIds.filter(id => !ds.has(id))];
+        if (order.join() !== newIds.join()) d.classLessonOrders[k.id] = order;
+      });
+    });
+    notify('교육과정 기본 순서를 변경했습니다. (이미 완료한 차시는 반별로 보존)');
+  };
+  const saveLesson = l => {
+    update(d => {
+      const c = d.curriculums.find(x => x.id === curr.id);
+      const i = c.lessons.findIndex(x => x.id === l.id);
+      if (i >= 0) c.lessons[i] = {
+        ...c.lessons[i],
+        ...l
+      };else c.lessons.push({
+        ...l,
+        lessonNumber: c.lessons.length + 1
+      });
+      c.totalLessons = c.lessons.length;
+    });
+    setEditing(null);
+    notify('차시 내용을 저장했습니다.');
+  };
+  const deleteLesson = async l => {
+    if (!(await ask(`${l.lessonNumber}차시 "${l.topic}"을(를) 삭제할까요?`))) return;
+    update(d => {
+      const c = d.curriculums.find(x => x.id === curr.id);
+      classesOf(d).forEach(k => {
+        const seq = getSequence(d, k.id, c);
+        const pos = seq.findIndex(x => x.id === l.id);
+        const cur = getCursor(d, k.id);
+        if (pos >= 0 && pos < cur - 1) d.classProgressCursors[k.id] = cur - 1;
+        if (d.classLessonOrders[k.id]) d.classLessonOrders[k.id] = d.classLessonOrders[k.id].filter(x => x !== l.id);
+      });
+      c.lessons = c.lessons.filter(x => x.id !== l.id).map((x, i) => ({
+        ...x,
+        lessonNumber: i + 1
+      }));
+      c.totalLessons = c.lessons.length;
+    });
+  };
+  return React.createElement("div", {
+    className: "space-y-4"
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-center gap-2"
+  }, React.createElement("h2", {
+    className: "text-2xl sm:text-3xl font-black mr-auto"
+  }, "\uAD50\uC721\uACFC\uC815 \uC0C1\uC138 ", React.createElement("span", {
+    className: "text-emerald-600"
+  }, "\xB7 ", grade.displayName)), React.createElement("div", {
+    className: "flex rounded-2xl bg-slate-200/70 p-1"
+  }, [['list', '차시 목록', 'fa-list-ol'], ['import', 'Excel 가져오기', 'fa-file-import']].map(([k, l, ic]) => React.createElement("button", {
+    key: k,
+    onClick: () => setTab(k),
+    className: `h-12 px-4 rounded-xl font-bold ${tab === k ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`
+  }, React.createElement("i", {
+    className: `fa-solid ${ic} mr-1.5`
+  }), l)))), tab === 'import' ? React.createElement(ImportPanel, {
+    data: data,
+    update: update,
+    yearGrades: yearGrades,
+    grade: grade,
+    notify: notify,
+    onDone: () => setTab('list')
+  }) : !curr ? React.createElement(Empty, {
+    icon: "fa-book",
+    title: "\uAD50\uC721\uACFC\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    desc: "\uC0C8\uB85C \uB9CC\uB4E4\uAC70\uB098 Excel \uD30C\uC77C\uB85C \uAC00\uC838\uC624\uC138\uC694.",
+    action: React.createElement("div", {
+      className: "flex gap-2"
+    }, React.createElement("button", {
+      className: "btn btn-primary",
+      onClick: ensureCurr
+    }, React.createElement("i", {
+      className: "fa-solid fa-plus"
+    }), "\uBE48 \uAD50\uC721\uACFC\uC815 \uB9CC\uB4E4\uAE30"), React.createElement("button", {
+      className: "btn btn-outline",
+      onClick: () => setTab('import')
+    }, "Excel \uAC00\uC838\uC624\uAE30"))
+  }) : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "card p-4 flex flex-wrap items-center gap-3"
+  }, React.createElement("div", {
+    className: "w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-xl"
+  }, React.createElement("i", {
+    className: "fa-solid fa-book-open"
+  })), React.createElement("div", {
+    className: "mr-auto"
+  }, React.createElement("div", {
+    className: "font-black text-lg"
+  }, curr.title), React.createElement("div", {
+    className: "text-sm text-slate-500 font-semibold"
+  }, curr.semester, " \xB7 \uCD1D ", curr.lessons.length, "\uCC28\uC2DC")), React.createElement("button", {
+    className: "btn btn-soft",
+    onClick: () => setMetaOpen(true)
+  }, React.createElement("i", {
+    className: "fa-solid fa-pen"
+  }), "\uC815\uBCF4 \uC218\uC815"), React.createElement("button", {
+    className: "btn btn-soft",
+    onClick: () => downloadCurriculumTemplate(curr)
+  }, React.createElement("i", {
+    className: "fa-solid fa-file-export"
+  }), "Excel \uB0B4\uBCF4\uB0B4\uAE30"), React.createElement("button", {
+    className: "btn btn-primary",
+    onClick: () => setEditing({
+      id: uid('l'),
+      ...emptyLesson(),
+      _new: true
+    })
+  }, React.createElement("i", {
+    className: "fa-solid fa-plus"
+  }), "\uCC28\uC2DC \uCD94\uAC00")), React.createElement("div", {
+    className: "rounded-2xl bg-violet-50 border border-violet-200 text-violet-900 px-4 py-3 text-sm"
+  }, React.createElement("i", {
+    className: "fa-solid fa-grip-vertical mr-2"
+  }), React.createElement("b", null, "\u2630 \uC190\uC7A1\uC774\uB97C \uB04C\uC5B4"), " \uAD50\uC721\uACFC\uC815 \uAE30\uBCF8 \uC21C\uC11C\uB97C \uBC14\uAFC0 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uBC18\uB9C8\uB2E4 \uB2E4\uB974\uAC8C \uC9C4\uD589\uD558\uB824\uBA74 [\uC624\uB298\uC758 \uC218\uC5C5]\xB7[\uC804\uCCB4 \uC9C4\uB3C4\uD45C]\uC758 ", React.createElement("b", null, "\uC21C\uC11C \uBCC0\uACBD"), " \uBC84\uD2BC\uC744 \uC0AC\uC6A9\uD558\uC138\uC694."), React.createElement("div", {
+    className: "hidden md:grid grid-cols-[3.5rem_3.5rem_1fr_6.5rem] items-center text-xs font-black text-slate-400 px-1"
+  }, React.createElement("span", null), React.createElement("span", {
+    className: "text-center"
+  }, "\uCC28\uC2DC"), React.createElement("div", {
+    className: "grid grid-cols-[1.1fr_1.6fr_1.4fr_1.2fr] gap-4 px-3"
+  }, React.createElement("span", null, "\uB2E8\uC6D0"), React.createElement("span", null, "\uC18C\uC8FC\uC81C"), React.createElement("span", null, "\uAC8C\uC784/\uD45C\uD604 \uD65C\uB3D9"), React.createElement("span", null, "\uC900\uBE44\uBB3C")), React.createElement("span", null)), React.createElement(SortableList, {
+    items: curr.lessons,
+    onReorder: reorderBase,
+    renderItem: (l, i, {
+      handleProps,
+      dragging
+    }) => React.createElement("div", {
+      className: `flex md:grid md:grid-cols-[3.5rem_3.5rem_1fr_6.5rem] items-stretch rounded-2xl border-2 bg-white overflow-hidden ${dragging ? 'border-violet-400' : 'border-slate-200'}`
+    }, React.createElement("button", _extends({}, handleProps, {
+      className: "w-14 shrink-0 flex items-center justify-center text-slate-400 hover:text-violet-600 hover:bg-violet-50 border-r border-slate-100"
+    }), React.createElement("i", {
+      className: "fa-solid fa-grip-vertical text-xl"
+    })), React.createElement("div", {
+      className: "w-14 shrink-0 flex items-center justify-center text-xl font-black text-emerald-700"
+    }, l.lessonNumber), React.createElement("div", {
+      className: "flex-1 min-w-0 grid md:grid-cols-[1.1fr_1.6fr_1.4fr_1.2fr] gap-x-4 gap-y-0.5 py-2.5 px-3 items-center cursor-pointer",
+      onClick: () => setEditing(l)
+    }, React.createElement("div", {
+      className: "text-sm font-bold text-sky-700 truncate"
+    }, l.unit), React.createElement("div", {
+      className: "font-bold truncate"
+    }, l.topic), React.createElement("div", {
+      className: "text-sm text-slate-600 truncate"
+    }, React.createElement("i", {
+      className: "fa-solid fa-gamepad text-amber-500 mr-1 md:hidden"
+    }), l.gameActivity), React.createElement("div", {
+      className: "text-sm text-slate-500 truncate"
+    }, React.createElement("i", {
+      className: "fa-solid fa-box-open text-slate-400 mr-1 md:hidden"
+    }), l.materials)), React.createElement("div", {
+      className: "flex items-center justify-end pr-1 shrink-0"
+    }, React.createElement("button", {
+      className: "btn-icon",
+      onClick: () => setEditing(l),
+      "aria-label": "\uD3B8\uC9D1"
+    }, React.createElement("i", {
+      className: "fa-solid fa-pen"
+    })), React.createElement("button", {
+      className: "btn-icon text-rose-400 hover:text-rose-600 hover:bg-rose-50",
+      onClick: () => deleteLesson(l),
+      "aria-label": "\uC0AD\uC81C"
+    }, React.createElement("i", {
+      className: "fa-solid fa-trash"
+    }))))
+  }), curr.lessons.length === 0 && React.createElement("p", {
+    className: "text-center text-slate-500 py-8"
+  }, "\uCC28\uC2DC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. [\uCC28\uC2DC \uCD94\uAC00] \uB610\uB294 Excel \uAC00\uC838\uC624\uAE30\uB97C \uC774\uC6A9\uD558\uC138\uC694.")), editing && React.createElement(LessonEditModal, {
+    lesson: editing,
+    onClose: () => setEditing(null),
+    onSave: saveLesson
+  }), metaOpen && curr && React.createElement(CurrMetaModal, {
+    curr: curr,
+    onClose: () => setMetaOpen(false),
+    onSave: m => {
+      update(d => {
+        Object.assign(d.curriculums.find(x => x.id === curr.id), m);
+      });
+      setMetaOpen(false);
+    }
+  }));
+}
+function CurrMetaModal({
+  curr,
+  onClose,
+  onSave
+}) {
+  const [title, setTitle] = useState(curr.title || '');
+  const [semester, setSemester] = useState(curr.semester || '');
+  return React.createElement(Modal, {
+    title: "\uAD50\uC721\uACFC\uC815 \uC815\uBCF4",
+    icon: "fa-book",
+    size: "sm",
+    onClose: onClose,
+    footer: React.createElement(React.Fragment, null, React.createElement("button", {
+      className: "btn btn-outline",
+      onClick: onClose
+    }, "\uCDE8\uC18C"), React.createElement("button", {
+      className: "btn btn-primary",
+      onClick: () => onSave({
+        title,
+        semester
+      })
+    }, "\uC800\uC7A5"))
+  }, React.createElement("div", {
+    className: "space-y-3"
+  }, React.createElement("div", null, React.createElement("label", {
+    className: "label"
+  }, "\uC81C\uBAA9"), React.createElement("input", {
+    className: "input",
+    value: title,
+    onChange: e => setTitle(e.target.value)
+  })), React.createElement("div", null, React.createElement("label", {
+    className: "label"
+  }, "\uD559\uAE30"), React.createElement("input", {
+    className: "input",
+    value: semester,
+    onChange: e => setSemester(e.target.value),
+    placeholder: "1\uD559\uAE30 / 2\uD559\uAE30"
+  }))));
+}
+function LessonEditModal({
+  lesson,
+  onClose,
+  onSave
+}) {
+  const [f, setF] = useState({
+    ...emptyLesson(),
+    ...lesson
+  });
+  const set = k => e => setF(x => ({
+    ...x,
+    [k]: e.target.value
+  }));
+  const fields = [['unit', '단원', 'input'], ['topic', '소주제', 'input'], ['objective', '학습 목표', 'area2'], ['mainActivity', '주요 활동', 'area4'], ['gameActivity', '게임/표현 활동', 'area2'], ['materials', '준비물 (쉼표로 구분)', 'input'], ['assessment', '평가 기준', 'area2'], ['edutech', '에듀테크', 'input']];
+  const submit = () => {
+    if (!f.topic.trim()) {
+      ask('소주제를 입력하세요.', {
+        alert: true
+      });
+      return;
+    }
+    const {
+      _new,
+      ...rest
+    } = f;
+    onSave(rest);
+  };
+  return React.createElement(Modal, {
+    title: lesson._new ? '새 차시 추가' : `${lesson.lessonNumber}차시 편집`,
+    icon: "fa-pen-to-square",
+    size: "lg",
+    onClose: onClose,
+    footer: React.createElement(React.Fragment, null, React.createElement("button", {
+      className: "btn btn-outline",
+      onClick: onClose
+    }, "\uCDE8\uC18C"), React.createElement("button", {
+      className: "btn btn-primary",
+      onClick: submit
+    }, React.createElement("i", {
+      className: "fa-solid fa-floppy-disk"
+    }), "\uC800\uC7A5"))
+  }, React.createElement("div", {
+    className: "grid sm:grid-cols-2 gap-3"
+  }, fields.map(([k, l, t]) => React.createElement("div", {
+    key: k,
+    className: t.startsWith('area') ? 'sm:col-span-2' : ''
+  }, React.createElement("label", {
+    className: "label"
+  }, l), t === 'input' ? React.createElement("input", {
+    className: "input",
+    value: f[k] || '',
+    onChange: set(k)
+  }) : React.createElement("textarea", {
+    className: "textarea",
+    rows: t === 'area4' ? 5 : 2,
+    value: f[k] || '',
+    onChange: set(k)
+  })))));
+}
+function ImportPanel({
+  data,
+  update,
+  yearGrades,
+  grade,
+  notify,
+  onDone
+}) {
+  const [file, setFile] = useState(null);
+  const [sheetName, setSheetName] = useState('');
+  const [rows, setRows] = useState([]);
+  const [headerIdx, setHeaderIdx] = useState(0);
+  const [mapping, setMapping] = useState([]);
+  const [targetId, setTargetId] = useState(grade ? grade.id : '');
+  const [semester, setSemester] = useState('2학기');
+  const [title, setTitle] = useState('');
+  const [over, setOver] = useState(false);
+  const inputRef = useRef(null);
+  const pickSheet = (sheets, sn) => {
+    const r = (sheets[sn] || []).filter(row => row.some(c => String(c).trim() !== ''));
+    const best = autoMap(r);
+    setSheetName(sn);
+    setRows(r);
+    setHeaderIdx(best.headerIdx);
+    setMapping(best.mapping);
+  };
+  const load = async f => {
+    try {
+      const wb = XLSX.read(await f.arrayBuffer(), {
+        type: 'array'
+      });
+      const sheets = {};
+      wb.SheetNames.forEach(n => {
+        sheets[n] = XLSX.utils.sheet_to_json(wb.Sheets[n], {
+          header: 1,
+          defval: '',
+          raw: false
+        });
+      });
+      setFile({
+        name: f.name,
+        sheets,
+        names: wb.SheetNames
+      });
+      pickSheet(sheets, wb.SheetNames[0]);
+    } catch (e) {
+      notify('파일을 읽을 수 없습니다: ' + e.message, null, 'error');
+    }
+  };
+  const lessons = useMemo(() => buildLessonsFromRows(rows, headerIdx, mapping), [rows, headerIdx, mapping]);
+  const header = rows[headerIdx] || [];
+  const mappedCount = mapping.filter(Boolean).length;
+  const nonEmptyCols = header.filter(h => String(h).trim()).length;
+  const target = yearGrades.find(g => g.id === targetId);
+  const register = async () => {
+    if (!target || !lessons.length) return;
+    const existing = data.curriculums.find(c => c.id === target.curriculumId);
+    if (existing && existing.lessons.length && !(await ask(`${target.displayName}의 기존 교육과정(${existing.lessons.length}차시)을 새 ${lessons.length}차시로 대체합니다.\n해당 학년 반들의 진도와 순서가 1차시로 초기화됩니다. 계속할까요?`))) return;
+    update(d => {
+      const g = d.grades.find(x => x.id === target.id);
+      let c = d.curriculums.find(x => x.id === g.curriculumId);
+      if (!c) {
+        c = {
+          id: uid('curr'),
+          schoolYearId: g.schoolYearId,
+          gradeId: g.id
+        };
+        d.curriculums.push(c);
+        g.curriculumId = c.id;
+      }
+      const ls = lessons.map((l, i) => ({
+        ...emptyLesson(),
+        ...l,
+        id: uid('l'),
+        lessonNumber: i + 1
+      }));
+      Object.assign(c, {
+        semester,
+        title: title.trim() || `${g.displayName} ${semester} 체육 교육과정`,
+        lessons: ls,
+        totalLessons: ls.length
+      });
+      d.classes.filter(x => x.gradeId === g.id).forEach(x => {
+        d.classProgressCursors[x.id] = 1;
+        delete d.classLessonOrders[x.id];
+      });
+    });
+    notify(`${target.displayName} 교육과정 ${lessons.length}차시를 등록했습니다.`);
+    onDone();
+  };
+  return React.createElement("div", {
+    className: "space-y-4"
+  }, React.createElement("div", {
+    className: "flex flex-wrap gap-2"
+  }, React.createElement("button", {
+    className: "btn btn-outline",
+    onClick: () => downloadCurriculumTemplate(null)
+  }, React.createElement("i", {
+    className: "fa-solid fa-file-arrow-down text-emerald-600"
+  }), "\uD45C\uC900 Excel \uC591\uC2DD \uB2E4\uC6B4\uB85C\uB4DC")), React.createElement("div", {
+    onDragOver: e => {
+      e.preventDefault();
+      setOver(true);
+    },
+    onDragLeave: () => setOver(false),
+    onDrop: e => {
+      e.preventDefault();
+      setOver(false);
+      const f = e.dataTransfer.files[0];
+      if (f) load(f);
+    },
+    onClick: () => inputRef.current && inputRef.current.click(),
+    className: `card border-dashed border-4 p-10 text-center cursor-pointer transition ${over ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 hover:border-slate-300'}`
+  }, React.createElement("i", {
+    className: "fa-solid fa-cloud-arrow-up text-5xl text-emerald-500"
+  }), React.createElement("div", {
+    className: "text-xl font-black mt-3"
+  }, file ? file.name : '교육과정 파일을 끌어다 놓거나 클릭하세요'), React.createElement("div", {
+    className: "text-slate-500 mt-1"
+  }, ".xlsx \xB7 .xls \xB7 .csv \u2014 \uC5F4 \uC774\uB984(\uCC28\uC2DC/\uD68C\uCC28, \uB2E8\uC6D0/\uC601\uC5ED, \uC18C\uC8FC\uC81C/\uCC28\uC2DC\uBA85 \u2026)\uC744 \uC790\uB3D9 \uC778\uC2DD\uD569\uB2C8\uB2E4"), React.createElement("input", {
+    ref: inputRef,
+    type: "file",
+    accept: ".xlsx,.xls,.csv",
+    className: "hidden",
+    onChange: e => {
+      const f = e.target.files[0];
+      if (f) load(f);
+      e.target.value = '';
+    }
+  })), file && React.createElement("div", {
+    className: "card p-4 sm:p-5 space-y-4"
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-center gap-3"
+  }, file.names.length > 1 && React.createElement("select", {
+    className: "input !w-auto",
+    value: sheetName,
+    onChange: e => pickSheet(file.sheets, e.target.value)
+  }, file.names.map(n => React.createElement("option", {
+    key: n
+  }, n))), React.createElement("span", {
+    className: `chip ${mappedCount >= Math.min(3, nonEmptyCols) ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`
+  }, React.createElement("i", {
+    className: "fa-solid fa-wand-magic-sparkles"
+  }), "\uC790\uB3D9 \uB9E4\uCE6D ", mappedCount, " / ", nonEmptyCols, "\uC5F4"), React.createElement("span", {
+    className: "chip bg-slate-100 text-slate-600"
+  }, "\uC778\uC2DD\uB41C \uCC28\uC2DC ", lessons.length, "\uAC1C"), React.createElement("span", {
+    className: "text-sm text-slate-500"
+  }, "\uC81C\uBAA9 \uD589: ", headerIdx + 1, "\uD589")), React.createElement("div", {
+    className: "overflow-x-auto"
+  }, React.createElement("table", {
+    className: "text-sm min-w-full"
+  }, React.createElement("thead", null, React.createElement("tr", null, header.map((h, ci) => React.createElement("th", {
+    key: ci,
+    className: "p-1 align-bottom min-w-[130px]"
+  }, React.createElement("div", {
+    className: "text-xs text-slate-400 font-semibold truncate mb-1"
+  }, String(h) || `(${ci + 1}열)`), React.createElement("select", {
+    value: mapping[ci] || '',
+    onChange: e => {
+      const v = e.target.value;
+      setMapping(m => m.map((x, i) => i === ci ? v : x === v && v ? '' : x));
+    },
+    className: `w-full h-10 rounded-lg border-2 px-1 font-bold ${mapping[ci] ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-200 text-slate-400'}`
+  }, React.createElement("option", {
+    value: ""
+  }, "\uC0AC\uC6A9 \uC548 \uD568"), LESSON_FIELDS.map(f => React.createElement("option", {
+    key: f.key,
+    value: f.key
+  }, f.label))))))), React.createElement("tbody", null, rows.slice(headerIdx + 1, headerIdx + 6).map((r, ri) => React.createElement("tr", {
+    key: ri,
+    className: "border-t border-slate-100"
+  }, header.map((_, ci) => React.createElement("td", {
+    key: ci,
+    className: `p-2 align-top max-w-[220px] truncate ${mapping[ci] ? '' : 'text-slate-300'}`
+  }, String(r[ci] ?? '')))))))), React.createElement("div", {
+    className: "grid sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100"
+  }, React.createElement("div", null, React.createElement("label", {
+    className: "label"
+  }, "\uC5F0\uACB0\uD560 \uD559\uB144"), React.createElement("select", {
+    className: "input",
+    value: targetId,
+    onChange: e => setTargetId(e.target.value)
+  }, yearGrades.map(g => React.createElement("option", {
+    key: g.id,
+    value: g.id
+  }, g.displayName)))), React.createElement("div", null, React.createElement("label", {
+    className: "label"
+  }, "\uD559\uAE30"), React.createElement("input", {
+    className: "input",
+    value: semester,
+    onChange: e => setSemester(e.target.value)
+  })), React.createElement("div", null, React.createElement("label", {
+    className: "label"
+  }, "\uAD50\uC721\uACFC\uC815 \uC81C\uBAA9 (\uC120\uD0DD)"), React.createElement("input", {
+    className: "input",
+    value: title,
+    onChange: e => setTitle(e.target.value),
+    placeholder: target ? `${target.displayName} ${semester} 체육 교육과정` : ''
+  }))), React.createElement("div", {
+    className: "flex justify-end"
+  }, React.createElement("button", {
+    className: "btn btn-primary text-lg px-6",
+    disabled: !lessons.length || !target,
+    onClick: register
+  }, React.createElement("i", {
+    className: "fa-solid fa-check"
+  }), "\uAD50\uC721\uACFC\uC815 \uB4F1\uB85D (", lessons.length, "\uCC28\uC2DC)"))));
+}
+function MemoView({
+  data,
+  update,
+  yearGrades,
+  notify
+}) {
+  const [filter, setFilter] = useState('all');
+  const [q, setQ] = useState('');
+  const [editing, setEditing] = useState(null);
+  const gradeIds = new Set(yearGrades.map(g => g.id));
+  const classes = data.classes.filter(c => gradeIds.has(c.gradeId)).sort((a, b) => {
+    const ga = yearGrades.find(g => g.id === a.gradeId),
+      gb = yearGrades.find(g => g.id === b.gradeId);
+    return ga.gradeNumber - gb.gradeNumber || a.classNumber - b.classNumber;
+  });
+  const clsMap = new Map(classes.map(c => [c.id, c]));
+  const posMap = useMemo(() => {
+    const m = new Map();
+    classes.forEach(c => seqForClass(data, c.id).forEach((l, i) => m.set(recKey(c.id, l.id), {
+      l,
+      pos: i + 1
+    })));
+    return m;
+  }, [data, classes.length]);
+  const items = Object.entries(data.lessonRecords).filter(([, r]) => r && clsMap.has(r.classId) && (r.memo || r.nextMemo)).map(([k, r]) => ({
+    k,
+    r,
+    c: clsMap.get(r.classId),
+    info: posMap.get(k)
+  })).filter(x => filter === 'all' || x.c.id === filter).filter(x => {
+    if (!q.trim()) return true;
+    const t = q.trim().toLowerCase();
+    return [x.r.memo, x.r.nextMemo, x.info && x.info.l.topic, x.info && x.info.l.unit, x.c.displayName].some(s => String(s || '').toLowerCase().includes(t));
+  }).sort((a, b) => String(b.r.date || '').localeCompare(String(a.r.date || '')) || (b.info ? b.info.pos : 0) - (a.info ? a.info.pos : 0));
+  const remove = async k => {
+    if (!(await ask('이 메모를 삭제할까요? (수업 완료 기록은 유지됩니다)'))) return;
+    update(d => {
+      const r = d.lessonRecords[k];
+      if (r) {
+        r.memo = '';
+        r.nextMemo = '';
+      }
+    });
+    notify('메모를 삭제했습니다.');
+  };
+  const save = (k, memo, nextMemo) => {
+    update(d => {
+      const r = d.lessonRecords[k];
+      if (r) {
+        r.memo = memo;
+        r.nextMemo = nextMemo;
+      }
+    });
+    setEditing(null);
+    notify('메모를 저장했습니다.');
+  };
+  return React.createElement("div", {
+    className: "space-y-4"
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-center gap-2"
+  }, React.createElement("h2", {
+    className: "text-2xl sm:text-3xl font-black mr-auto"
+  }, "\uC218\uC5C5 \uBA54\uBAA8\uC7A5 ", React.createElement("span", {
+    className: "text-slate-400 text-lg"
+  }, items.length, "\uAC74")), React.createElement("div", {
+    className: "relative"
+  }, React.createElement("i", {
+    className: "fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+  }), React.createElement("input", {
+    className: "input !pl-9 !w-64",
+    placeholder: "\uBA54\uBAA8\xB7\uC8FC\uC81C \uAC80\uC0C9",
+    value: q,
+    onChange: e => setQ(e.target.value)
+  }))), React.createElement("div", {
+    className: "flex gap-2 overflow-x-auto no-scrollbar"
+  }, React.createElement("button", {
+    onClick: () => setFilter('all'),
+    className: `min-h-[44px] px-4 rounded-xl font-bold shrink-0 ${filter === 'all' ? 'bg-slate-900 text-white' : 'bg-white border-2 border-slate-200 text-slate-600'}`
+  }, "\uC804\uCCB4"), classes.map(c => React.createElement("button", {
+    key: c.id,
+    onClick: () => setFilter(c.id),
+    className: `min-h-[44px] px-4 rounded-xl font-bold shrink-0 ${filter === c.id ? 'bg-slate-900 text-white' : 'bg-white border-2 border-slate-200 text-slate-600'}`
+  }, c.displayName))), items.length === 0 ? React.createElement(Empty, {
+    icon: "fa-note-sticky",
+    title: "\uBA54\uBAA8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4",
+    desc: "[\uC624\uB298\uC758 \uC218\uC5C5] \uCE74\uB4DC\uC5D0\uC11C \uC774\uBC88 \uC2DC\uAC04 \uBA54\uBAA8\uC640 \uB2E4\uC74C \uC2DC\uAC04 \uCC38\uACE0\uC0AC\uD56D\uC744 \uC791\uC131\uD558\uBA74 \uC5EC\uAE30\uC5D0 \uBAA8\uC785\uB2C8\uB2E4."
+  }) : React.createElement("div", {
+    className: "grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+  }, items.map(({
+    k,
+    r,
+    c,
+    info
+  }) => React.createElement("div", {
+    key: k,
+    className: "card p-4 flex flex-col gap-2"
+  }, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("span", {
+    className: "rounded-lg bg-slate-900 text-white px-2.5 py-1 font-black text-sm"
+  }, c.displayName), React.createElement("span", {
+    className: "font-bold text-slate-500 text-sm"
+  }, info ? `${info.pos}차시` : '삭제된 차시'), React.createElement("span", {
+    className: "ml-auto text-xs font-semibold text-slate-400"
+  }, r.date || '')), React.createElement("div", {
+    className: "font-black"
+  }, info ? info.l.topic : '(교육과정에서 삭제됨)'), r.memo && React.createElement("div", {
+    className: "rounded-xl bg-amber-50 p-2.5 text-sm"
+  }, React.createElement("div", {
+    className: "text-[11px] font-black text-amber-600"
+  }, "\uC218\uC5C5 \uBA54\uBAA8"), r.memo), r.nextMemo && React.createElement("div", {
+    className: "rounded-xl bg-indigo-50 p-2.5 text-sm"
+  }, React.createElement("div", {
+    className: "text-[11px] font-black text-indigo-600"
+  }, "\uB2E4\uC74C \uC2DC\uAC04 \uCC38\uACE0"), r.nextMemo), React.createElement("div", {
+    className: "flex justify-end gap-1 mt-auto"
+  }, React.createElement("button", {
+    className: "btn-icon",
+    onClick: () => setEditing({
+      k,
+      memo: r.memo || '',
+      nextMemo: r.nextMemo || '',
+      title: `${c.displayName} · ${info ? info.l.topic : ''}`
+    }),
+    "aria-label": "\uC218\uC815"
+  }, React.createElement("i", {
+    className: "fa-solid fa-pen"
+  })), React.createElement("button", {
+    className: "btn-icon text-rose-400 hover:text-rose-600 hover:bg-rose-50",
+    onClick: () => remove(k),
+    "aria-label": "\uC0AD\uC81C"
+  }, React.createElement("i", {
+    className: "fa-solid fa-trash"
+  })))))), editing && React.createElement(MemoEditModal, {
+    item: editing,
+    onClose: () => setEditing(null),
+    onSave: save
+  }));
+}
+function MemoEditModal({
+  item,
+  onClose,
+  onSave
+}) {
+  const [memo, setMemo] = useState(item.memo);
+  const [nextMemo, setNextMemo] = useState(item.nextMemo);
+  return React.createElement(Modal, {
+    title: item.title,
+    icon: "fa-note-sticky",
+    onClose: onClose,
+    footer: React.createElement(React.Fragment, null, React.createElement("button", {
+      className: "btn btn-outline",
+      onClick: onClose
+    }, "\uCDE8\uC18C"), React.createElement("button", {
+      className: "btn btn-primary",
+      onClick: () => onSave(item.k, memo, nextMemo)
+    }, "\uC800\uC7A5"))
+  }, React.createElement("div", {
+    className: "space-y-3"
+  }, React.createElement("div", null, React.createElement("label", {
+    className: "label"
+  }, "\uC218\uC5C5 \uBA54\uBAA8"), React.createElement("textarea", {
+    className: "textarea",
+    rows: 4,
+    value: memo,
+    onChange: e => setMemo(e.target.value)
+  })), React.createElement("div", null, React.createElement("label", {
+    className: "label"
+  }, "\uB2E4\uC74C \uC2DC\uAC04 \uCC38\uACE0\uC0AC\uD56D"), React.createElement("textarea", {
+    className: "textarea",
+    rows: 3,
+    value: nextMemo,
+    onChange: e => setNextMemo(e.target.value)
+  }))));
+}
+function EquipmentView({
+  data,
+  update,
+  yearGrades
+}) {
+  const [name, setName] = useState('');
+  const [qty, setQty] = useState('');
+  const currs = data.curriculums.filter(c => yearGrades.some(g => g.curriculumId === c.id));
+  const usage = eq => {
+    const b = norm(eq.name);
+    let n = 0;
+    currs.forEach(c => c.lessons.forEach(l => {
+      if (splitMaterials(l.materials).some(m => {
+        const a = norm(m);
+        return a && (a.includes(b) || b.includes(a));
+      })) n++;
+    }));
+    return n;
+  };
+  const patch = (id, p) => update(d => {
+    const e = d.equipment.find(x => x.id === id);
+    if (e) Object.assign(e, p);
+  });
+  const add = () => {
+    const n = name.trim();
+    if (!n) return;
+    update(d => {
+      d.equipment.push({
+        id: uid('eq'),
+        name: n,
+        quantity: Math.max(0, parseInt(qty, 10) || 0),
+        alertBelow: 10
+      });
+    });
+    setName('');
+    setQty('');
+  };
+  const low = data.equipment.filter(e => Number(e.quantity) < Number(e.alertBelow ?? 10)).length;
+  return React.createElement("div", {
+    className: "space-y-4"
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-center gap-2"
+  }, React.createElement("h2", {
+    className: "text-2xl sm:text-3xl font-black mr-auto"
+  }, "\uAD50\uAD6C \uAD00\uB9AC ", React.createElement("span", {
+    className: "text-slate-400 text-lg"
+  }, data.equipment.length, "\uC885")), low > 0 && React.createElement("span", {
+    className: "chip bg-amber-50 text-amber-700 border border-amber-200"
+  }, "\u26A0\uFE0F \uBD80\uC871 ", low, "\uC885")), React.createElement("form", {
+    className: "card p-4 flex flex-wrap gap-2",
+    onSubmit: e => {
+      e.preventDefault();
+      add();
+    }
+  }, React.createElement("input", {
+    className: "input !w-auto flex-1 min-w-[160px]",
+    placeholder: "\uAD50\uAD6C \uC774\uB984 (\uC608: \uB18D\uAD6C\uACF5)",
+    value: name,
+    onChange: e => setName(e.target.value)
+  }), React.createElement("input", {
+    className: "input !w-28",
+    type: "number",
+    min: "0",
+    placeholder: "\uC218\uB7C9",
+    value: qty,
+    onChange: e => setQty(e.target.value)
+  }), React.createElement("button", {
+    className: "btn btn-primary"
+  }, React.createElement("i", {
+    className: "fa-solid fa-plus"
+  }), "\uAD50\uAD6C \uB4F1\uB85D")), React.createElement("div", {
+    className: "grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+  }, data.equipment.map(e => {
+    const isLow = Number(e.quantity) < Number(e.alertBelow ?? 10);
+    const u = usage(e);
+    return React.createElement("div", {
+      key: e.id,
+      className: `card p-4 ${isLow ? 'ring-2 ring-amber-300' : ''}`
+    }, React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, React.createElement(InlineInput, {
+      value: e.name,
+      className: "!min-h-[40px] font-black text-lg !border-transparent hover:!border-slate-200 !px-1",
+      onCommit: v => v.trim() && patch(e.id, {
+        name: v.trim()
+      })
+    }), React.createElement("button", {
+      className: "btn-icon text-rose-400 hover:text-rose-600 hover:bg-rose-50",
+      onClick: async () => {
+        if (await ask(`${e.name}을(를) 삭제할까요?`)) update(d => {
+          d.equipment = d.equipment.filter(x => x.id !== e.id);
+        });
+      },
+      "aria-label": "\uC0AD\uC81C"
+    }, React.createElement("i", {
+      className: "fa-solid fa-trash"
+    }))), React.createElement("div", {
+      className: "flex items-center gap-2 mt-2"
+    }, React.createElement("button", {
+      className: "w-14 h-14 rounded-2xl bg-slate-100 hover:bg-slate-200 text-2xl font-black active:scale-90",
+      onClick: () => patch(e.id, {
+        quantity: Math.max(0, Number(e.quantity) - 1)
+      }),
+      "aria-label": "\uAC10\uC18C"
+    }, "\u2212"), React.createElement("input", {
+      type: "number",
+      min: "0",
+      value: e.quantity,
+      onChange: ev => patch(e.id, {
+        quantity: Math.max(0, parseInt(ev.target.value, 10) || 0)
+      }),
+      className: `flex-1 min-w-0 h-14 text-center text-3xl font-black rounded-2xl border-2 ${isLow ? 'border-amber-300 text-amber-600 bg-amber-50' : 'border-slate-200'}`
+    }), React.createElement("button", {
+      className: "w-14 h-14 rounded-2xl bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-2xl font-black active:scale-90",
+      onClick: () => patch(e.id, {
+        quantity: Number(e.quantity) + 1
+      }),
+      "aria-label": "\uC99D\uAC00"
+    }, "+")), React.createElement("div", {
+      className: "flex items-center justify-between mt-3 text-sm text-slate-500 font-semibold"
+    }, React.createElement("span", null, u > 0 ? `교육과정 ${u}개 차시에서 사용` : '사용 차시 없음'), React.createElement("label", {
+      className: "flex items-center gap-1"
+    }, "\uACBD\uACE0 \uAE30\uC900 ", React.createElement("input", {
+      type: "number",
+      min: "0",
+      value: e.alertBelow ?? 10,
+      onChange: ev => patch(e.id, {
+        alertBelow: Math.max(0, parseInt(ev.target.value, 10) || 0)
+      }),
+      className: "w-14 h-9 text-center rounded-lg border-2 border-slate-200"
+    }), "\uAC1C \uBBF8\uB9CC")), isLow && React.createElement("div", {
+      className: "mt-2 text-sm font-bold text-amber-700"
+    }, "\u26A0\uFE0F \uBCF4\uC720 \uBD80\uC871 (", e.quantity, "\uAC1C)"));
+  })));
+}
+function SettingsModal({
+  data,
+  update,
+  setData,
+  yearId,
+  setUi,
+  onClose,
+  notify,
+  cloud,
+  syncCode,
+  onSyncCode,
+  onFbChange
+}) {
+  const [newYear, setNewYear] = useState(() => {
+    const n = Math.max(0, ...data.schoolYears.map(y => parseInt(y.year, 10) || 0));
+    return `${(n || new Date().getFullYear()) + 1}학년도`;
+  });
+  const [copyStructure, setCopyStructure] = useState(true);
+  const [newGrade, setNewGrade] = useState('');
+  const [cfgText, setCfgText] = useState(() => {
+    const c = getFirebaseConfig();
+    return c ? JSON.stringify(c, null, 2) : '';
+  });
+  const restoreRef = useRef(null);
+  const year = data.schoolYears.find(y => y.id === yearId);
+  const grades = data.grades.filter(g => g.schoolYearId === yearId).sort((a, b) => a.gradeNumber - b.gradeNumber);
+  const freeNums = [1, 2, 3, 4, 5, 6].filter(n => !grades.some(g => g.gradeNumber === n));
+  const injected = typeof window.__firebase_config !== 'undefined' && !!window.__firebase_config;
+  const addYear = () => {
+    const label = newYear.trim();
+    if (!label) return;
+    if (data.schoolYears.some(y => y.year === label)) {
+      notify('이미 있는 학년도입니다.', null, 'error');
+      return;
+    }
+    const id = uid('sy');
+    update(d => {
+      d.schoolYears.push({
+        id,
+        year: label,
+        isCurrent: false
+      });
+      if (copyStructure && year) {
+        d.grades.filter(g => g.schoolYearId === year.id).forEach(g => {
+          const gid = uid('g');
+          const src = d.curriculums.find(c => c.id === g.curriculumId);
+          let cid = null;
+          if (src) {
+            cid = uid('curr');
+            d.curriculums.push({
+              ...clone(src),
+              id: cid,
+              schoolYearId: id,
+              gradeId: gid,
+              lessons: src.lessons.map(l => ({
+                ...l,
+                id: uid('l')
+              }))
+            });
+          }
+          d.grades.push({
+            ...g,
+            id: gid,
+            schoolYearId: id,
+            curriculumId: cid
+          });
+          d.classes.filter(c => c.gradeId === g.id).forEach(c => d.classes.push({
+            ...c,
+            id: uid('c'),
+            gradeId: gid
+          }));
+        });
+      }
+    });
+    setUi(u => ({
+      ...u,
+      yearId: id,
+      gradeId: null
+    }));
+    notify(`${label}을(를) 추가했습니다.`);
+  };
+  const setCurrentYear = id => update(d => {
+    d.schoolYears.forEach(y => {
+      y.isCurrent = y.id === id;
+    });
+  });
+  const deleteYear = async y => {
+    if (data.schoolYears.length <= 1) {
+      notify('학년도는 최소 1개가 필요합니다.', null, 'error');
+      return;
+    }
+    if (!(await ask(`${y.year}의 모든 학년·학급·교육과정·기록을 삭제합니다. 되돌릴 수 없습니다. 계속할까요?`))) return;
+    update(d => {
+      wipeYear(d, y.id);
+      d.schoolYears = d.schoolYears.filter(x => x.id !== y.id);
+      if (!d.schoolYears.some(x => x.isCurrent)) d.schoolYears[0].isCurrent = true;
+    });
+    setUi(u => ({
+      ...u,
+      yearId: null,
+      gradeId: null
+    }));
+  };
+  const addGrade = () => {
+    const n = parseInt(newGrade, 10);
+    if (!n) return;
+    update(d => {
+      const gid = uid('g'),
+        cid = uid('curr');
+      d.curriculums.push({
+        id: cid,
+        schoolYearId: yearId,
+        gradeId: gid,
+        semester: '1학기',
+        title: `${n}학년 체육 교육과정`,
+        totalLessons: 0,
+        lessons: []
+      });
+      d.grades.push({
+        id: gid,
+        schoolYearId: yearId,
+        gradeNumber: n,
+        displayName: `${n}학년`,
+        active: true,
+        curriculumId: cid
+      });
+      d.classes.push({
+        id: uid('c'),
+        gradeId: gid,
+        classNumber: 1,
+        displayName: `${n}-1`,
+        active: true
+      });
+    });
+    setNewGrade('');
+  };
+  const deleteGrade = async g => {
+    if (!(await ask(`${g.displayName}과(와) 소속 학급·학생·교육과정·기록을 모두 삭제할까요?`))) return;
+    update(d => {
+      removeClassData(d, d.classes.filter(c => c.gradeId === g.id).map(c => c.id));
+      d.curriculums = d.curriculums.filter(c => c.id !== g.curriculumId);
+      d.grades = d.grades.filter(x => x.id !== g.id);
+    });
+  };
+  const addClass = g => update(d => {
+    const n = d.classes.filter(c => c.gradeId === g.id).reduce((m, c) => Math.max(m, c.classNumber), 0) + 1;
+    d.classes.push({
+      id: uid('c'),
+      gradeId: g.id,
+      classNumber: n,
+      displayName: `${g.gradeNumber}-${n}`,
+      active: true
+    });
+  });
+  const removeClass = async g => {
+    const cls = sortClasses(data.classes.filter(c => c.gradeId === g.id));
+    const last = cls[cls.length - 1];
+    if (!last) return;
+    const cnt = data.students.filter(s => s.classId === last.id).length;
+    if (!(await ask(`${last.displayName}반을 삭제할까요?${cnt ? ` (학생 ${cnt}명과 기록도 삭제됩니다)` : ''}`))) return;
+    update(d => removeClassData(d, [last.id]));
+  };
+  const saveCfg = () => {
+    if (!cfgText.trim()) {
+      LS.del(FB_KEY);
+      onFbChange();
+      notify('Firebase 연결을 해제했습니다. (로컬 저장 모드)', null, 'info');
+      return;
+    }
+    try {
+      const cfg = parseConfigText(cfgText);
+      LS.set(FB_KEY, JSON.stringify(cfg));
+      setCfgText(JSON.stringify(cfg, null, 2));
+      onFbChange();
+      notify('Firebase 구성을 저장했습니다. 연결을 시도합니다.');
+    } catch (e) {
+      notify('구성 형식 오류: ' + e.message, null, 'error');
+    }
+  };
+  const resetYear = async () => {
+    if (!year || !(await ask(`[${year.year}] 데이터만 초기화합니다.\n학년·학급·교육과정·학생·진도·메모가 삭제되고, 다른 학년도 기록은 보존됩니다. 계속할까요?`))) return;
+    update(d => wipeYear(d, year.id));
+    notify(`${year.year} 데이터를 초기화했습니다.`);
+  };
+  const factoryReset = async () => {
+    if (!(await ask('전체 시스템을 공장 초기화합니다. 모든 학년도의 데이터가 삭제되고 샘플 데이터로 돌아갑니다.\n연동된 다른 기기(핸드폰 등)에도 반영됩니다. 계속할까요?'))) return;
+    if (!(await ask('정말 초기화할까요? 되돌릴 수 없습니다. (먼저 JSON 백업을 권장합니다)'))) return;
+    const s = buildSeed();
+    s._updatedAt = Date.now();
+    setData(s);
+    setUi(u => ({
+      ...u,
+      yearId: null,
+      gradeId: null
+    }));
+    notify('공장 초기화를 완료했습니다.', null, 'info');
+  };
+  const backup = () => downloadBlob(new Blob([JSON.stringify(data, null, 2)], {
+    type: 'application/json'
+  }), `PE_Master_백업_${todayStr()}.json`);
+  const restore = async f => {
+    try {
+      const d = normalize(JSON.parse(await f.text()));
+      if (!d.schoolYears.length) throw new Error('학년도 데이터가 없습니다.');
+      if (!(await ask('백업 파일로 현재 데이터를 모두 대체할까요?'))) return;
+      d._updatedAt = Date.now();
+      setData(d);
+      setUi(u => ({
+        ...u,
+        yearId: null,
+        gradeId: null
+      }));
+      notify('백업을 복원했습니다.');
+    } catch (e) {
+      notify('복원 실패: ' + e.message, null, 'error');
+    }
+  };
+  const Section = SettingsSection;
+  return React.createElement(Modal, {
+    title: "\uC124\uC815",
+    icon: "fa-gear",
+    size: "lg",
+    onClose: onClose,
+    footer: React.createElement("button", {
+      className: "btn btn-primary",
+      onClick: onClose
+    }, "\uB2EB\uAE30")
+  }, React.createElement("div", {
+    className: "space-y-4"
+  }, React.createElement(Section, {
+    icon: "fa-calendar",
+    title: "\uD559\uB144\uB3C4"
+  }, React.createElement("div", {
+    className: "space-y-2"
+  }, data.schoolYears.map(y => React.createElement("div", {
+    key: y.id,
+    className: `flex items-center gap-2 rounded-xl px-3 py-1.5 ${y.id === yearId ? 'bg-emerald-50' : 'bg-slate-50'}`
+  }, React.createElement("span", {
+    className: "font-black flex-1"
+  }, y.year, " ", y.id === yearId && React.createElement("span", {
+    className: "text-xs text-emerald-600 ml-1"
+  }, "\uBCF4\uB294 \uC911")), y.isCurrent ? React.createElement("span", {
+    className: "chip bg-amber-100 text-amber-700"
+  }, "\u2605 \uD604\uC7AC \uD559\uB144\uB3C4") : React.createElement("button", {
+    className: "h-10 px-3 rounded-lg text-sm font-bold text-slate-600 hover:bg-white",
+    onClick: () => setCurrentYear(y.id)
+  }, "\uD604\uC7AC\uB85C \uC9C0\uC815"), y.id !== yearId && React.createElement("button", {
+    className: "h-10 px-3 rounded-lg text-sm font-bold text-slate-600 hover:bg-white",
+    onClick: () => setUi(u => ({
+      ...u,
+      yearId: y.id,
+      gradeId: null
+    }))
+  }, "\uC5F4\uAE30"), React.createElement("button", {
+    className: "btn-icon text-rose-400 hover:bg-rose-50",
+    onClick: () => deleteYear(y),
+    "aria-label": "\uC0AD\uC81C"
+  }, React.createElement("i", {
+    className: "fa-solid fa-trash"
+  }))))), React.createElement("div", {
+    className: "flex flex-wrap items-center gap-2 mt-3"
+  }, React.createElement("input", {
+    className: "input !w-48",
+    value: newYear,
+    onChange: e => setNewYear(e.target.value)
+  }), React.createElement("label", {
+    className: "flex items-center gap-2 text-sm font-semibold min-h-[48px]"
+  }, React.createElement("input", {
+    type: "checkbox",
+    className: "w-5 h-5 accent-emerald-600",
+    checked: copyStructure,
+    onChange: e => setCopyStructure(e.target.checked)
+  }), "\uBCF4\uACE0 \uC788\uB294 \uD559\uB144\uB3C4\uC758 \uD559\uB144\xB7\uD559\uAE09\xB7\uAD50\uC721\uACFC\uC815 \uBCF5\uC0AC"), React.createElement("button", {
+    className: "btn btn-dark",
+    onClick: addYear
+  }, React.createElement("i", {
+    className: "fa-solid fa-plus"
+  }), "\uD559\uB144\uB3C4 \uCD94\uAC00"))), React.createElement(Section, {
+    icon: "fa-school",
+    title: `담당 학년 · 학급 (${year ? year.year : ''})`
+  }, React.createElement("div", {
+    className: "space-y-2"
+  }, grades.map(g => {
+    const cls = sortClasses(data.classes.filter(c => c.gradeId === g.id));
+    return React.createElement("div", {
+      key: g.id,
+      className: "flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 px-3 py-2"
+    }, React.createElement("span", {
+      className: "font-black text-lg w-16"
+    }, g.displayName), React.createElement("div", {
+      className: "flex flex-wrap gap-1 flex-1"
+    }, cls.map(c => React.createElement("span", {
+      key: c.id,
+      className: "chip bg-white border border-slate-200"
+    }, c.displayName))), React.createElement("button", {
+      className: "btn-icon border-2 border-slate-200 bg-white",
+      onClick: () => removeClass(g),
+      disabled: !cls.length,
+      "aria-label": "\uBC18 \uC0AD\uC81C"
+    }, React.createElement("i", {
+      className: "fa-solid fa-minus"
+    })), React.createElement("span", {
+      className: "font-black w-10 text-center"
+    }, cls.length, "\uBC18"), React.createElement("button", {
+      className: "btn-icon border-2 border-slate-200 bg-white",
+      onClick: () => addClass(g),
+      "aria-label": "\uBC18 \uCD94\uAC00"
+    }, React.createElement("i", {
+      className: "fa-solid fa-plus"
+    })), React.createElement("button", {
+      className: "btn-icon text-rose-400 hover:bg-rose-50",
+      onClick: () => deleteGrade(g),
+      "aria-label": "\uD559\uB144 \uC0AD\uC81C"
+    }, React.createElement("i", {
+      className: "fa-solid fa-trash"
+    })));
+  })), freeNums.length > 0 && React.createElement("div", {
+    className: "flex gap-2 mt-3"
+  }, React.createElement("select", {
+    className: "input !w-40",
+    value: newGrade,
+    onChange: e => setNewGrade(e.target.value)
+  }, React.createElement("option", {
+    value: ""
+  }, "\uD559\uB144 \uC120\uD0DD"), freeNums.map(n => React.createElement("option", {
+    key: n,
+    value: n
+  }, n, "\uD559\uB144"))), React.createElement("button", {
+    className: "btn btn-dark",
+    onClick: addGrade,
+    disabled: !newGrade
+  }, React.createElement("i", {
+    className: "fa-solid fa-plus"
+  }), "\uD559\uB144 \uCD94\uAC00"))), cloud.mode === 'claude' ? React.createElement(Section, {
+    icon: "fa-cloud",
+    title: "\uAE30\uAE30 \uC5F0\uB3D9 (Claude \uACC4\uC815)"
+  }, React.createElement("div", {
+    className: "text-sm text-slate-600 space-y-2"
+  }, React.createElement("p", null, "\uD604\uC7AC \uC0C1\uD0DC: ", React.createElement("b", {
+    className: cloud.status === 'connected' ? 'text-emerald-700' : cloud.status === 'error' ? 'text-rose-600' : ''
+  }, {
+    connecting: '연결 중…',
+    connected: '연동 중 — 모든 변경이 자동 저장됩니다',
+    error: '오류',
+    off: '사용 안 함'
+  }[cloud.status]), " ", cloud.error && React.createElement("span", {
+    className: "text-rose-600"
+  }, "(", cloud.error, ")")), React.createElement("p", null, "\uC774 \uD398\uC774\uC9C0\uB294 ", React.createElement("b", null, "\uB0B4 Claude \uACC4\uC815\uC758 \uBE44\uACF5\uAC1C \uC800\uC7A5\uC18C"), "\uC5D0 \uC800\uC7A5\uB429\uB2C8\uB2E4. PC\xB7\uD578\uB4DC\uD3F0\xB7\uC804\uC790\uCE60\uD310\uC5D0\uC11C ", React.createElement("b", null, "\uAC19\uC740 Claude \uACC4\uC815\uC73C\uB85C \uB85C\uADF8\uC778\uD55C \uB4A4 \uC774 \uD398\uC774\uC9C0 \uC8FC\uC18C"), "\uB97C \uC5F4\uBA74 \uB3D9\uAE30\uD654 \uCF54\uB4DC\uB098 Firebase \uC5C6\uC774 \uAC19\uC740 \uB370\uC774\uD130\uAC00 \uB098\uD0C0\uB0A9\uB2C8\uB2E4."), React.createElement("p", {
+    className: "text-slate-500"
+  }, "\uB2E4\uB978 \uC0AC\uB78C\uC5D0\uAC8C \uD398\uC774\uC9C0\uB97C \uACF5\uC720\uD574\uB3C4 \uD559\uC0DD \uBA85\uB2E8\xB7\uC9C4\uB3C4 \uB370\uC774\uD130\uB294 \uAC01\uC790\uC758 \uC800\uC7A5\uC18C\uC5D0 \uB530\uB85C \uC800\uC7A5\uB418\uC5B4 \uC11C\uB85C \uBCF4\uC774\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."))) : React.createElement(Section, {
+    icon: "fa-cloud",
+    title: "\uC2E4\uC2DC\uAC04 \uD074\uB77C\uC6B0\uB4DC \uB3D9\uAE30\uD654 (Firebase)"
+  }, React.createElement("div", {
+    className: "text-sm text-slate-600 space-y-1 mb-3"
+  }, React.createElement("p", null, "\uAC19\uC740 ", React.createElement("b", null, "\uB3D9\uAE30\uD654 \uCF54\uB4DC"), "\uB97C \uC785\uB825\uD55C \uC2A4\uB9C8\uD2B8\uD3F0\xB7PC\xB7\uC804\uC790\uCE60\uD310\uC774 \uC2E4\uC2DC\uAC04\uC73C\uB85C \uC591\uBC29\uD5A5 \uB3D9\uAE30\uD654\uB429\uB2C8\uB2E4. \uD604\uC7AC \uC0C1\uD0DC: ", React.createElement("b", null, {
+    local: '로컬 저장 (이 기기만)',
+    connecting: '연결 중',
+    connected: '실시간 연동 중',
+    error: '오류'
+  }[cloud.status]), " ", cloud.error && React.createElement("span", {
+    className: "text-rose-600"
+  }, "(", cloud.error, ")")), React.createElement("p", {
+    className: "text-slate-500"
+  }, "Firebase \uCF58\uC194 \u2192 \uD504\uB85C\uC81D\uD2B8 \uC124\uC815 \u2192 \uB0B4 \uC571(\uC6F9) \u2192 SDK \uAD6C\uC131(", React.createElement("code", null, "firebaseConfig"), ")\uC744 \uBD99\uC5EC\uB123\uC73C\uC138\uC694. Authentication\uC5D0\uC11C ", React.createElement("b", null, "\uC775\uBA85 \uB85C\uADF8\uC778"), ", Firestore Database\uB97C \uC0AC\uC6A9 \uC124\uC815\uD574\uC57C \uD569\uB2C8\uB2E4. \uC800\uC7A5 \uACBD\uB85C: ", React.createElement("code", {
+    className: "text-xs"
+  }, "/artifacts/", APP_ID, "/public/data/pe_master_rooms/sync_", syncCode))), React.createElement("div", {
+    className: "flex items-center gap-2 mb-2"
+  }, React.createElement("span", {
+    className: "label !mb-0"
+  }, "\uB3D9\uAE30\uD654 \uCF54\uB4DC"), React.createElement(InlineInput, {
+    value: syncCode,
+    className: "!w-40 font-mono font-bold uppercase",
+    onCommit: v => onSyncCode(v)
+  })), injected ? React.createElement("p", {
+    className: "text-sm font-semibold text-emerald-700"
+  }, "\uC2E4\uD589 \uD658\uACBD\uC5D0\uC11C \uC81C\uACF5\uB41C Firebase \uAD6C\uC131\uC744 \uC0AC\uC6A9 \uC911\uC785\uB2C8\uB2E4.") : React.createElement(React.Fragment, null, React.createElement("textarea", {
+    className: "textarea font-mono text-xs",
+    rows: 6,
+    value: cfgText,
+    onChange: e => setCfgText(e.target.value),
+    placeholder: 'const firebaseConfig = {\n  apiKey: "...",\n  authDomain: "...",\n  projectId: "...",\n  appId: "..."\n};'
+  }), React.createElement("div", {
+    className: "flex justify-end gap-2 mt-2"
+  }, cfgText && React.createElement("button", {
+    className: "btn btn-soft",
+    onClick: () => {
+      setCfgText('');
+      LS.del(FB_KEY);
+      onFbChange();
+    }
+  }, "\uC5F0\uACB0 \uD574\uC81C"), React.createElement("button", {
+    className: "btn btn-dark",
+    onClick: saveCfg
+  }, React.createElement("i", {
+    className: "fa-solid fa-plug"
+  }), "\uAD6C\uC131 \uC800\uC7A5 \uBC0F \uC5F0\uACB0"))), React.createElement(DeviceConnectPanel, {
+    syncCode: syncCode,
+    cloud: cloud,
+    notify: notify
+  }), React.createElement("details", {
+    className: "mt-3 rounded-xl bg-slate-50 p-3"
+  }, React.createElement("summary", {
+    className: "font-bold cursor-pointer min-h-[32px]"
+  }, React.createElement("i", {
+    className: "fa-solid fa-shield-halved text-emerald-600 mr-1.5"
+  }), "Firestore \uBCF4\uC548 \uADDC\uCE59 (\uCC98\uC74C \uD55C \uBC88\uB9CC \uC124\uC815)"), React.createElement("p", {
+    className: "text-sm text-slate-600 mt-2"
+  }, "Firebase \uCF58\uC194 \u2192 Firestore Database \u2192 ", React.createElement("b", null, "\uADDC\uCE59"), " \uD0ED\uC5D0 \uC544\uB798 \uB0B4\uC6A9\uC744 \uBD99\uC5EC\uB123\uACE0 [\uAC8C\uC2DC]\uD558\uC138\uC694. \uB3D9\uAE30\uD654 \uCF54\uB4DC\uB97C \uC544\uB294 \uAE30\uAE30\uB9CC \uC77D\uACE0 \uC4F8 \uC218 \uC788\uACE0, \uB2E4\uB978 \uBC29 \uBAA9\uB85D\uC740 \uC870\uD68C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."), React.createElement("pre", {
+    className: "mt-2 rounded-lg bg-slate-900 text-emerald-200 text-xs p-3 overflow-x-auto"
+  }, FIRESTORE_RULES), React.createElement("button", {
+    className: "btn btn-soft mt-2 min-h-[40px]",
+    onClick: () => copyText(FIRESTORE_RULES).then(ok => notify(ok ? '보안 규칙을 복사했습니다.' : '복사하지 못했습니다. 직접 선택해 복사하세요.', null, ok ? 'success' : 'error'))
+  }, React.createElement("i", {
+    className: "fa-solid fa-copy"
+  }), "\uADDC\uCE59 \uBCF5\uC0AC"))), React.createElement(Section, {
+    icon: "fa-database",
+    title: "\uB370\uC774\uD130 \uAD00\uB9AC"
+  }, React.createElement("div", {
+    className: "flex flex-wrap gap-2"
+  }, React.createElement("button", {
+    className: "btn btn-outline",
+    onClick: backup
+  }, React.createElement("i", {
+    className: "fa-solid fa-download"
+  }), "\uC804\uCCB4 JSON \uBC31\uC5C5"), React.createElement("button", {
+    className: "btn btn-outline",
+    onClick: () => restoreRef.current && restoreRef.current.click()
+  }, React.createElement("i", {
+    className: "fa-solid fa-upload"
+  }), "\uBC31\uC5C5 \uBCF5\uC6D0"), React.createElement("input", {
+    ref: restoreRef,
+    type: "file",
+    accept: ".json,application/json",
+    className: "hidden",
+    onChange: e => {
+      const f = e.target.files[0];
+      if (f) restore(f);
+      e.target.value = '';
+    }
+  })), React.createElement("div", {
+    className: "flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100"
+  }, React.createElement("button", {
+    className: "btn btn-danger",
+    onClick: resetYear
+  }, React.createElement("i", {
+    className: "fa-solid fa-eraser"
+  }), "\uD604\uC7AC \uD559\uB144\uB3C4\uB9CC \uCD08\uAE30\uD654"), React.createElement("button", {
+    className: "btn bg-rose-600 text-white hover:bg-rose-700",
+    onClick: factoryReset
+  }, React.createElement("i", {
+    className: "fa-solid fa-triangle-exclamation"
+  }), "\uC804\uCCB4 \uC2DC\uC2A4\uD15C \uACF5\uC7A5 \uCD08\uAE30\uD654")))));
+}
+function SettingsSection({
+  icon,
+  title,
+  children
+}) {
+  return React.createElement("section", {
+    className: "rounded-2xl border-2 border-slate-100 p-4"
+  }, React.createElement("h4", {
+    className: "font-black text-lg mb-3"
+  }, React.createElement("i", {
+    className: `fa-solid ${icon} text-emerald-600 mr-2`
+  }), title), children);
+}
+function wipeYear(d, yid) {
+  const gids = d.grades.filter(g => g.schoolYearId === yid).map(g => g.id);
+  removeClassData(d, d.classes.filter(c => gids.includes(c.gradeId)).map(c => c.id));
+  d.curriculums = d.curriculums.filter(c => c.schoolYearId !== yid && !gids.includes(c.gradeId));
+  d.grades = d.grades.filter(g => g.schoolYearId !== yid);
+}
+function App() {
+  const [data, setData] = useState(loadData);
+  const [ui, setUi] = useState(loadUi);
+  const [syncCode, setSyncCodeState] = useState(() => LS.get(SYNC_KEY) || 'MAIN');
+  const [fbVer, setFbVer] = useState(0);
+  const [toast, setToast] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [orderFor, setOrderFor] = useState(null);
+  const fbCloud = useCloudSync(data, setData, IN_CLAUDE ? null : syncCode, fbVer);
+  const claudeCloud = useClaudeSync(data, setData);
+  const cloud = IN_CLAUDE ? {
+    ...claudeCloud,
+    mode: 'claude'
+  } : {
+    ...fbCloud,
+    mode: 'firebase'
+  };
+  useEffect(() => {
+    try {
+      LS.set(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {}
+  }, [data]);
+  useEffect(() => {
+    LS.set(UI_KEY, JSON.stringify(ui));
+  }, [ui]);
+  useEffect(() => {
+    document.documentElement.style.fontSize = `calc(clamp(14px, 0.4vw + 9px, 24px) * ${ui.scale || 1})`;
+  }, [ui.scale]);
+  useEffect(() => {
+    const h = e => {
+      if (e.key !== STORAGE_KEY || !e.newValue) return;
+      try {
+        const d = normalize(JSON.parse(e.newValue));
+        setData(p => (d._updatedAt || 0) > (p._updatedAt || 0) ? d : p);
+      } catch (err) {}
+    };
+    window.addEventListener('storage', h);
+    return () => window.removeEventListener('storage', h);
+  }, []);
+  const update = useCallback(fn => setData(prev => {
+    const d = clone(prev);
+    fn(d);
+    d._updatedAt = Date.now();
+    return d;
+  }), []);
+  const notify = useCallback((msg, action, type = 'success') => {
+    const id = Date.now() + Math.random();
+    setToast({
+      msg,
+      action,
+      type,
+      id
+    });
+    setTimeout(() => setToast(t => t && t.id === id ? null : t), action ? 7000 : 3500);
+  }, []);
+  useEffect(() => {
+    if (window.__peConnected === undefined) return;
+    if (window.__peConnected) notify(`연결 링크로 설정을 받았습니다. 동기화 코드 [${syncCode}]로 연동합니다.`);else notify('연결 링크가 올바르지 않습니다. PC에서 링크를 다시 만들어 주세요.', null, 'error');
+    delete window.__peConnected;
+  }, []);
+  const setSyncCode = c => {
+    const v = String(c || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '') || 'MAIN';
+    LS.set(SYNC_KEY, v);
+    setSyncCodeState(v);
+    notify(`동기화 코드 [${v}]로 전환했습니다.`, null, 'info');
+  };
+  const years = data.schoolYears;
+  const yearId = (years.find(y => y.id === ui.yearId) || years.find(y => y.isCurrent) || years[0] || {}).id;
+  const yearGrades = data.grades.filter(g => g.schoolYearId === yearId).sort((a, b) => a.gradeNumber - b.gradeNumber);
+  const grade = yearGrades.find(g => g.id === ui.gradeId) || yearGrades[0] || null;
+  const classes = grade ? sortClasses(data.classes.filter(c => c.gradeId === grade.id)) : [];
+  const curr = getCurriculumByGrade(data, grade);
+  const actions = useMemo(() => ({
+    goView: v => setUi(u => ({
+      ...u,
+      view: v
+    })),
+    complete: classId => {
+      const seq = seqForClass(data, classId);
+      const cur = getCursor(data, classId);
+      const lesson = seq[cur - 1];
+      const cls = data.classes.find(c => c.id === classId);
+      if (!lesson || !cls) return;
+      fireConfetti();
+      const k = recKey(classId, lesson.id);
+      update(d => {
+        d.lessonRecords[k] = {
+          memo: '',
+          nextMemo: '',
+          ...(d.lessonRecords[k] || {}),
+          classId,
+          lessonId: lesson.id,
+          status: 'COMPLETE',
+          date: todayStr()
+        };
+        d.classProgressCursors[classId] = cur + 1;
+      });
+      const next = seq[cur];
+      notify(`${cls.displayName} ${cur}차시 완료! ${next ? `다음: ${next.topic}` : '모든 차시 완료 🎉'}`, {
+        label: '되돌리기',
+        fn: () => update(d => applyCursor(d, classId, cur))
+      });
+    },
+    setCursor: (classId, pos, withUndo) => {
+      const prev = getCursor(data, classId);
+      update(d => applyCursor(d, classId, pos));
+      if (withUndo) {
+        const cls = data.classes.find(c => c.id === classId);
+        notify(`${cls ? cls.displayName : ''} 진도를 ${pos}차시로 지정했습니다.`, {
+          label: '실행 취소',
+          fn: () => update(d => applyCursor(d, classId, prev))
+        }, 'info');
+      }
+    },
+    saveMemo: (classId, lessonId, field, val) => update(d => {
+      const k = recKey(classId, lessonId);
+      const r = {
+        status: 'PENDING',
+        memo: '',
+        nextMemo: '',
+        date: '',
+        ...(d.lessonRecords[k] || {}),
+        classId,
+        lessonId,
+        [field]: val
+      };
+      if (!r.date) r.date = todayStr();
+      if (!r.memo && !r.nextMemo && r.status !== 'COMPLETE') delete d.lessonRecords[k];else d.lessonRecords[k] = r;
+    })
+  }), [data, update, notify]);
+  const view = ui.view || 'today';
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view]);
+  return React.createElement("div", {
+    className: "min-h-screen pb-24 md:pb-8"
+  }, React.createElement(Header, {
+    ui: ui,
+    setUi: setUi,
+    years: years,
+    yearId: yearId,
+    yearGrades: yearGrades,
+    grade: grade,
+    cloud: cloud,
+    syncCode: syncCode,
+    onSyncCode: setSyncCode,
+    onSettings: () => setSettingsOpen(true)
+  }), React.createElement("main", {
+    className: "max-w-[1900px] mx-auto px-3 sm:px-5 py-4 sm:py-6"
+  }, view === 'today' && React.createElement(TodayView, {
+    data: data,
+    grade: grade,
+    classes: classes,
+    curr: curr,
+    actions: actions,
+    onOpenOrder: setOrderFor,
+    goSettings: () => setSettingsOpen(true)
+  }), view === 'teams' && React.createElement(TeamView, {
+    key: grade ? grade.id : 'none',
+    data: data,
+    update: update,
+    grade: grade,
+    classes: classes,
+    notify: notify
+  }), view === 'progress' && React.createElement(ProgressView, {
+    data: data,
+    grade: grade,
+    classes: classes,
+    curr: curr,
+    actions: actions,
+    onOpenOrder: setOrderFor
+  }), view === 'curriculum' && React.createElement(CurriculumView, {
+    key: grade ? grade.id : 'none',
+    data: data,
+    update: update,
+    grade: grade,
+    curr: curr,
+    yearGrades: yearGrades,
+    notify: notify
+  }), view === 'memo' && React.createElement(MemoView, {
+    data: data,
+    update: update,
+    yearGrades: yearGrades,
+    notify: notify
+  }), view === 'equipment' && React.createElement(EquipmentView, {
+    data: data,
+    update: update,
+    yearGrades: yearGrades
+  })), React.createElement(MobileNav, {
+    view: view,
+    setUi: setUi
+  }), orderFor && React.createElement(OrderModal, {
+    classId: orderFor,
+    data: data,
+    update: update,
+    notify: notify,
+    onClose: () => setOrderFor(null)
+  }), settingsOpen && React.createElement(SettingsModal, {
+    data: data,
+    update: update,
+    setData: setData,
+    yearId: yearId,
+    setUi: setUi,
+    onClose: () => setSettingsOpen(false),
+    notify: notify,
+    cloud: cloud,
+    syncCode: syncCode,
+    onSyncCode: setSyncCode,
+    onFbChange: () => setFbVer(v => v + 1)
+  }), React.createElement(Toast, {
+    toast: toast,
+    onClose: () => setToast(null)
+  }), React.createElement(DialogHost, null));
+}
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App, null));
+</script>
+</body>
+</html>
